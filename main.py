@@ -23,6 +23,39 @@ runProgram = True
 print("Python ECG Detection Running")
 print(__name__ + '\n')
 
+# Defining UI Methods
+
+# Boilerplate code - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder
+class createMainWindow(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+ 
+        self.setMinimumSize(QSize(800, 600))    
+        self.setWindowTitle("Electrocardiogram Analyzer") 
+        
+        centralWidget = QWidget(self)          
+        self.setCentralWidget(centralWidget)   
+ 
+        gridLayout = QGridLayout(self)     
+        centralWidget.setLayout(gridLayout)  
+ 
+        title = QLabel("Electrocardiogram Analyzer", self) 
+        title.setAlignment(QtCore.Qt.AlignTop)
+        gridLayout.addWidget(title, 0, 0)
+        
+        menu = self.menuBar().addMenu('File')
+        actionQuit = menu.addAction('Quit')
+        actionQuit.triggered.connect(QtWidgets.QApplication.quit)
+        
+        # Look into creating options - https://pythonprogramming.net/open-files-pyqt-tutorial/
+        
+        actionOpen = menu.addAction(file_open)
+        
+        menu = self.menuBar().addMenu('Settings')
+
+        self.btn = QPushButton("QFileDialog static method demo")
+        self.btn.clicked.connect(self.getfile)
+
 # Defining the functions that we will be utilising
 
 # Main Method that will call the rest of the code. The GUI will work with the main function to show user input to the user
@@ -81,6 +114,7 @@ def detectSingleBeat():
 # Method to calculate the PQRST sections of the heart beat
 def findPqrstSections():
     print("Splitting individual heart beats by the individual sections: P Q R S T ")
+    # Find normal amplitude range for different parts
 
 # Method to calculate the heartrate using the R Peak from the PQRST data
 def calculateHeartrate():
@@ -93,9 +127,14 @@ def classifyHeartrate():
 
 # Call the main function
 if __name__ == '__main__':
-    main()
+    # main()
     def run_gui():
-        
+        print("UI Running")
+        # Boiler plate code - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder
+        app = QtWidgets.QApplication(sys.argv)
+        mainWin = createMainWindow()
+        mainWin.show()
+        app.exec_()
     run_gui()
 
 # Boiler plate code for pyqt - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder

@@ -29,7 +29,7 @@ print(__name__ + '\n')
 class createMainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
- 
+
         self.setMinimumSize(QSize(800, 600))    
         self.setWindowTitle("Electrocardiogram Analyzer") 
         
@@ -43,18 +43,35 @@ class createMainWindow(QMainWindow):
         title.setAlignment(QtCore.Qt.AlignTop)
         gridLayout.addWidget(title, 0, 0)
         
-        menu = self.menuBar().addMenu('File')
-        actionQuit = menu.addAction('Quit')
+        # File Menu options
+        file = self.menuBar().addMenu('File')
+        actionQuit = file.addAction('Quit')
+        actionQuit.setShortcut('Ctrl+Q')
         actionQuit.triggered.connect(QtWidgets.QApplication.quit)
         
-        # Look into creating options - https://pythonprogramming.net/open-files-pyqt-tutorial/
+        actionOpen = file.addAction('Open File')
+        actionOpen.setShortcut('Ctrl+O')
+        actionOpen.setStatusTip('Import File')
+        actionOpen.triggered.connect(self.importFile)
         
-        actionOpen = menu.addAction(file_open)
+        # actionOpen = Action performed when button is pressed.
+        # .triggered.connect causes the action to be performed
         
-        menu = self.menuBar().addMenu('Settings')
+        # Settings Menu Options
+        settings = self.menuBar().addMenu('Settings')
 
-        self.btn = QPushButton("QFileDialog static method demo")
-        self.btn.clicked.connect(self.getfile)
+    # Totally taken from - http://zetcode.com/gui/pyqt5/dialogs/
+    # Needs to be rewritten
+    def importFile(self):
+
+        # Sets window name and directory to search in
+        fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose A Data File To Import', '/ecgData')
+        if fname[0]: # Name Needs Changing
+            file = open(fname[0], 'r')
+
+            with file:
+                ecgData = file.read()
+                # TODO Call method to check for file type and parse   
 
 # Defining the functions that we will be utilising
 
@@ -77,6 +94,7 @@ def main():
         
 
             # TODO GUI Stuff to change runProgram to false
+            
 
 # Method that looks for the filetype of the document that we are passing into the program so that we can correctly parse the data
 def detectFileType():

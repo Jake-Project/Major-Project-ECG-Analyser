@@ -47,6 +47,7 @@ class createMainWindow(QMainWindow):
         file = self.menuBar().addMenu('File')
         actionQuit = file.addAction('Quit')
         actionQuit.setShortcut('Ctrl+Q')
+        actionQuit.setShortcut('Ctrl+W')
         actionQuit.triggered.connect(QtWidgets.QApplication.quit)
         
         actionOpen = file.addAction('Open File')
@@ -64,14 +65,31 @@ class createMainWindow(QMainWindow):
     # Needs to be rewritten
     def importFile(self):
 
+        # Sets filter to stop anything except CSV and JSON files
+        filter = "Data Files(*.csv *.json)"
+        
         # Sets window name and directory to search in
-        fname = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose A Data File To Import', '/ecgData')
-        if fname[0]: # Name Needs Changing
-            file = open(fname[0], 'r')
+        fileInformation = QtWidgets.QFileDialog.getOpenFileName(self, 'Choose A Data File To Import', '/ecgData', filter)
+        
+        #Retrieve the document name from the returned string
+        fileName = QtCore.QFileInfo(fileInformation[0]).fileName()
+        
+        
+        docLocation = fileInformation[0]
+        print('Location of document')
+        print(docLocation)
+        print('This is the name of the document to open')
+        print(fileName)
+        
+        #If fileInformation has been populated
+        if fileInformation[0]:
+            file = open(fileInformation[0], 'r')
 
             with file:
                 ecgData = file.read()
+
                 # TODO Call method to check for file type and parse   
+                detectFileType(fileName)
 
 # Defining the functions that we will be utilising
 
@@ -97,12 +115,13 @@ def main():
             
 
 # Method that looks for the filetype of the document that we are passing into the program so that we can correctly parse the data
-def detectFileType():
+def detectFileType(fileName):
     print("Finding file type")
-    if docLocation.endswith('.CSV'):
+    print(fileName)
+    if fileName.endswith('.csv'):
         parseCsv()
 
-    elif docLocation.endswith('.JSON'):
+    elif fileName.endswith('.json'):
         parseJson()
 
     else:

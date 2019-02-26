@@ -1,16 +1,24 @@
 import pandas as panda # Library to enable east use of time series data
-import matplotlib.pyplot as matplot # Library to enable us to see graphs and charts
 
 import sys
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QSizePolicy, QVBoxLayout, QPushButton
 from PyQt5.QtCore import QSize   
+
+import pyqtgraph as pg
+
+import csv
+
+# TODO Only for testing MatPlotLib - Remove if not needed. Used with the guide which can be found on the story in trello
+import random
 
 # docLocation = ""
 numRecords = 0
 # Create a multidimensional array for the dataset.
 # TODO May be best to not have this as global?
-ecgDataset = [[0 for x in range(2)] for y in range(2)]
+ecgDataset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+
 
 # Create a multidimensional array for the individual heartbeats that we find.
 # TODO May be best to not have this as global?
@@ -27,6 +35,11 @@ print(__name__ + '\n')
 
 # Boilerplate code - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder
 class createMainWindow(QMainWindow):
+    
+    # __init__ Is the constructor method for this class.
+    # The object that we are constructing is QMainWindow which is part of PyQt
+    # When createMainWindow is called we are creating the window in the constructor below
+    # In summary self is the QMainWindow that we create that we are setting the variables for
     def __init__(self):
         QMainWindow.__init__(self)
 
@@ -54,14 +67,36 @@ class createMainWindow(QMainWindow):
         actionOpen.setShortcut('Ctrl+O')
         actionOpen.setStatusTip('Import File')
         actionOpen.triggered.connect(self.importFile)
-        
         # actionOpen = Action performed when button is pressed.
         # .triggered.connect causes the action to be performed
         
         # Settings Menu Options
         settings = self.menuBar().addMenu('Settings')
-
-    # Function that allows for a file to be imported into the program. File is saved and ready for data to be imported
+        
+        self.centralwidget = QWidget(self)
+        self.graphicsView = pg.PlotWidget(self.centralwidget)
+        gridLayout.addWidget(self.graphicsView)
+        
+        # Plot the dataset
+        self.graphicsView.plot(ecgDataset)
+        
+        pybutton = QPushButton('Click me', self)
+        pybutton.resize(100,32)
+        pybutton.move(360, 550)        
+        pybutton.clicked.connect(self.updatePlot)
+        
+    def updatePlot(self, graphicsView):
+            
+        
+       # gridLayout = self.centralWidget.layout()
+       # gridLayout.removeWidget(self.graphicsView)
+       # gridLayout.addWidget(self.graphicsView)
+        self.graphicsView.plot(ecgDataset)
+       # self.hide()
+       # self.show()
+        
+    
+    # Function that allows for a file to be imported into the program. File information is saved and ready for data to be imported
     def importFile(self):
 
         # Sets filter to stop anything except CSV and JSON files
@@ -131,7 +166,19 @@ def parseCsv(docLocation):
     with file:
         ecgData = file.read()
         print('There are ' + str(sum(1 for row in ecgData)) + ' Records in the CSV data')
-
+        print(type(ecgData))
+        
+    # Convert String Data Into INT - Finds Newline - https://www.quora.com/How-do-I-convert-strings-in-CSV-into-integer-in-Python
+    with open(docLocation, newline = "") as fileForCsvReader:
+        reader = csv.reader(fileForCsvReader)
+        #Go through row by row and convert to INT
+        for row in reader:
+            i = int(row[0])
+            # print(i)
+            # print(type(i))
+            ecgDataset.append(i)
+            
+    print(ecgDataset)
 
     # TODO Look into CSV library in order to read CSV data - https://docs.python.org/3/library/csv.html
 

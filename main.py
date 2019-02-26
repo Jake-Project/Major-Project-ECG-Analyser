@@ -1,14 +1,11 @@
 import pandas as panda # Library to enable east use of time series data
-import matplotlib.pyplot as matplot # Library to enable us to see graphs and charts
 
 import sys
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QSizePolicy
+from PyQt5 import QtCore, QtWidgets, QtGui
+from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QSizePolicy, QVBoxLayout, QPushButton
 from PyQt5.QtCore import QSize   
 
-from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+import pyqtgraph as pg
 
 import csv
 
@@ -19,7 +16,7 @@ import random
 numRecords = 0
 # Create a multidimensional array for the dataset.
 # TODO May be best to not have this as global?
-ecgDataset = []
+ecgDataset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 
 
@@ -38,6 +35,11 @@ print(__name__ + '\n')
 
 # Boilerplate code - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder
 class createMainWindow(QMainWindow):
+    
+    # __init__ Is the constructor method for this class.
+    # The object that we are constructing is QMainWindow which is part of PyQt
+    # When createMainWindow is called we are creating the window in the constructor below
+    # In summary self is the QMainWindow that we create that we are setting the variables for
     def __init__(self):
         QMainWindow.__init__(self)
 
@@ -65,18 +67,35 @@ class createMainWindow(QMainWindow):
         actionOpen.setShortcut('Ctrl+O')
         actionOpen.setStatusTip('Import File')
         actionOpen.triggered.connect(self.importFile)
-        
         # actionOpen = Action performed when button is pressed.
         # .triggered.connect causes the action to be performed
         
         # Settings Menu Options
         settings = self.menuBar().addMenu('Settings')
         
-        # Defining the space for the ECG data plot to go.
-        # Used this as a guide - https://pythonspot.com/pyqt5-matplotlib/
-        ecgDataPlot = ecgPlot(self, width = 5, height = 4) # Change these widths and heights
-        ecgDataPlot.move(0,30)# - Taken from above link but could be moved anywhere
-
+        self.centralwidget = QWidget(self)
+        self.graphicsView = pg.PlotWidget(self.centralwidget)
+        gridLayout.addWidget(self.graphicsView)
+        
+        # Plot the dataset
+        self.graphicsView.plot(ecgDataset)
+        
+        pybutton = QPushButton('Click me', self)
+        pybutton.resize(100,32)
+        pybutton.move(360, 550)        
+        pybutton.clicked.connect(self.updatePlot)
+        
+    def updatePlot(self, graphicsView):
+            
+        
+       # gridLayout = self.centralWidget.layout()
+       # gridLayout.removeWidget(self.graphicsView)
+       # gridLayout.addWidget(self.graphicsView)
+        self.graphicsView.plot(ecgDataset)
+       # self.hide()
+       # self.show()
+        
+    
     # Function that allows for a file to be imported into the program. File information is saved and ready for data to be imported
     def importFile(self):
 
@@ -101,30 +120,6 @@ class createMainWindow(QMainWindow):
         
             # Call method to check for file type and parse   
             detectFileType(fileName, docLocation)
-            
-# FigureCanvasQTAgg is taken from MatPlotLib and is imported at the top            
-class ecgPlot(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
- 
-        FigureCanvasQTAgg.__init__(self, fig)
-        self.setParent(parent)
- 
-        FigureCanvasQTAgg.setSizePolicy(self,
-                QSizePolicy.Expanding,
-                QSizePolicy.Expanding)
-        FigureCanvasQTAgg.updateGeometry(self)
-        self.plot()
- 
- 
-    def plot(self):
-        #data = [random.random() for i in range(25)]
-        data = ecgDataset
-        ax = self.figure.add_subplot(111)
-        ax.plot(data, 'r-')
-        ax.set_title('PyQt Matplotlib Example')
-        self.draw()
 
 # Defining the functions that we will be utilising
 
@@ -179,11 +174,11 @@ def parseCsv(docLocation):
         #Go through row by row and convert to INT
         for row in reader:
             i = int(row[0])
-            print(i)
-            print(type(i))
+            # print(i)
+            # print(type(i))
             ecgDataset.append(i)
             
-    ecgPlot()
+    print(ecgDataset)
 
     # TODO Look into CSV library in order to read CSV data - https://docs.python.org/3/library/csv.html
 

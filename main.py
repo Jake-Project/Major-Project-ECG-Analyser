@@ -3,14 +3,25 @@ import matplotlib.pyplot as matplot # Library to enable us to see graphs and cha
 
 import sys
 from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget
+from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QSizePolicy
 from PyQt5.QtCore import QSize   
+
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+
+import csv
+
+# TODO Only for testing MatPlotLib - Remove if not needed. Used with the guide which can be found on the story in trello
+import random
 
 # docLocation = ""
 numRecords = 0
 # Create a multidimensional array for the dataset.
 # TODO May be best to not have this as global?
-ecgDataset = [[0 for x in range(2)] for y in range(2)]
+ecgDataset = []
+
+
 
 # Create a multidimensional array for the individual heartbeats that we find.
 # TODO May be best to not have this as global?
@@ -60,8 +71,13 @@ class createMainWindow(QMainWindow):
         
         # Settings Menu Options
         settings = self.menuBar().addMenu('Settings')
+        
+        # Defining the space for the ECG data plot to go.
+        # Used this as a guide - https://pythonspot.com/pyqt5-matplotlib/
+        ecgDataPlot = ecgPlot(self, width = 5, height = 4) # Change these widths and heights
+        ecgDataPlot.move(0,30)# - Taken from above link but could be moved anywhere
 
-    # Function that allows for a file to be imported into the program. File is saved and ready for data to be imported
+    # Function that allows for a file to be imported into the program. File information is saved and ready for data to be imported
     def importFile(self):
 
         # Sets filter to stop anything except CSV and JSON files
@@ -85,6 +101,30 @@ class createMainWindow(QMainWindow):
         
             # Call method to check for file type and parse   
             detectFileType(fileName, docLocation)
+            
+# FigureCanvasQTAgg is taken from MatPlotLib and is imported at the top            
+class ecgPlot(FigureCanvasQTAgg):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+ 
+        FigureCanvasQTAgg.__init__(self, fig)
+        self.setParent(parent)
+ 
+        FigureCanvasQTAgg.setSizePolicy(self,
+                QSizePolicy.Expanding,
+                QSizePolicy.Expanding)
+        FigureCanvasQTAgg.updateGeometry(self)
+        self.plot()
+ 
+ 
+    def plot(self):
+        #data = [random.random() for i in range(25)]
+        data = ecgDataset
+        ax = self.figure.add_subplot(111)
+        ax.plot(data, 'r-')
+        ax.set_title('PyQt Matplotlib Example')
+        self.draw()
 
 # Defining the functions that we will be utilising
 
@@ -131,7 +171,19 @@ def parseCsv(docLocation):
     with file:
         ecgData = file.read()
         print('There are ' + str(sum(1 for row in ecgData)) + ' Records in the CSV data')
-
+        print(type(ecgData))
+        
+    # Convert String Data Into INT - Finds Newline - https://www.quora.com/How-do-I-convert-strings-in-CSV-into-integer-in-Python
+    with open(docLocation, newline = "") as fileForCsvReader:
+        reader = csv.reader(fileForCsvReader)
+        #Go through row by row and convert to INT
+        for row in reader:
+            i = int(row[0])
+            print(i)
+            print(type(i))
+            ecgDataset.append(i)
+            
+    ecgPlot()
 
     # TODO Look into CSV library in order to read CSV data - https://docs.python.org/3/library/csv.html
 

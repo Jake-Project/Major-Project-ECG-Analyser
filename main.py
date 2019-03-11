@@ -7,10 +7,10 @@ from PyQt5.QtCore import QSize
 
 import pyqtgraph as pg
 
-import csv
+# For peak detection
+import scipy.signal as signal
 
-# TODO Only for testing MatPlotLib - Remove if not needed. Used with the guide which can be found on the story in trello
-import random
+import csv
 
 # docLocation = ""
 numRecords = 0
@@ -80,10 +80,16 @@ class createMainWindow(QMainWindow):
         # Plot the dataset
         self.graphicsView.plot(ecgDataset)
         
-        pybutton = QPushButton('Click me', self)
+        pybutton = QPushButton('Plot Dataset', self)
         pybutton.resize(100,32)
         pybutton.move(360, 550)        
         pybutton.clicked.connect(self.updatePlot)
+        
+        # For testing. Allows for me to view the main dataset and also the peaks found next to each other
+        pybutton = QPushButton('Plot Peaks Next To Dataset', self)
+        pybutton.resize(100,32)
+        pybutton.move(360, 600)        
+        pybutton.clicked.connect(self.findQrsComplex)
         
     def updatePlot(self, graphicsView):
             
@@ -91,10 +97,31 @@ class createMainWindow(QMainWindow):
        # gridLayout = self.centralWidget.layout()
        # gridLayout.removeWidget(self.graphicsView)
        # gridLayout.addWidget(self.graphicsView)
-        self.graphicsView.plot(ecgDataset)
+       self.graphicsView.clear()
+       self.graphicsView.plot(ecgDataset)
        # self.hide()
        # self.show()
+       
+    
+    # Function to detect QRS Complex
+    def findQrsComplex(self, graphicsView):
+        print("bladlsajdlksajldksajkofjlksklfjlkfja")
+        signalPeaks = signal.find_peaks(ecgDataset, height=0, distance=100)
+        print(signalPeaks[0])
+    
+        peaks = list()
+    
+        # Get data from index where we have found a peak because find_peaks gives us the index of peaks and not the actual peaks
+        for dataIndex in signalPeaks[0]:
+    
+            peaks.append(ecgDataset[dataIndex])
+            #print(ecgDataset[dataIndex])
+            
+            # Append peaks to ecg dataset to be shown. If this is left as is TODO remove peaks
+            ecgDataset.append(ecgDataset[dataIndex])
         
+        self.graphicsView.clear()
+        self.graphicsView.plot(peaks)
     
     # Function that allows for a file to be imported into the program. File information is saved and ready for data to be imported
     def importFile(self):
@@ -168,19 +195,20 @@ def parseCsv(docLocation):
         print('There are ' + str(sum(1 for row in ecgData)) + ' Records in the CSV data')
         print(type(ecgData))
         
+    # Remove old data from array
+    ecgDataset.clear()
+        
     # Convert String Data Into INT - Finds Newline - https://www.quora.com/How-do-I-convert-strings-in-CSV-into-integer-in-Python
     with open(docLocation, newline = "") as fileForCsvReader:
         reader = csv.reader(fileForCsvReader)
         #Go through row by row and convert to INT
         for row in reader:
-            i = int(row[0])
+            i = float(row[0])
             # print(i)
             # print(type(i))
             ecgDataset.append(i)
             
     print(ecgDataset)
-
-    # TODO Look into CSV library in order to read CSV data - https://docs.python.org/3/library/csv.html
 
 # TODO NEED TO LOOK INTO THIS FULLY
 # Method to parse the JSON data
@@ -229,5 +257,9 @@ if __name__ == '__main__':
         mainWin.show()
         app.exec_()
     run_gui()
+    
+    
+        # TODO Look into CSV library in order to read CSV data - https://docs.python.org/3/library/csv.html
+
 
 # Boiler plate code for pyqt - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder

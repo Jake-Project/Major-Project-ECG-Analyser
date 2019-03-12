@@ -55,12 +55,6 @@ class createMainWindow(QMainWindow):
         actionOpen.triggered.connect(self.importFile)
         # actionOpen = Action performed when button is pressed.
         # .triggered.connect causes the action to be performed
-        
-        # For testing. Allows for me to view the main dataset and also the peaks found next to each other
-        pybutton = QPushButton('Format CSV File', self)
-        pybutton.resize(100,32)
-        pybutton.move(360, 600)        
-       # pybutton.clicked.connect(self.findQrsComplex)
     
     # Function that allows for a file to be imported into the program. File information is saved and ready for data to be imported
     def importFile(self):

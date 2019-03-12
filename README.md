@@ -5,6 +5,9 @@ This project is written using Python 3.7 and Spyder.
 ## Premise
 As the final Capstone for my Bachelors at Aberystwyth University I am researching Electrocardiograms and studying heart rates.
 
+## Data Aquisition
+Talk about Welch Allyn - 600hz
+
 ## Programs and Code
 There are 2 programs that I created during this project. The first program allows CSV data to be sanitised in order to be used for heart rate analysis.
 

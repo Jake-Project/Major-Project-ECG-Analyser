@@ -10,6 +10,8 @@ import pyqtgraph as pg
 # For peak detection
 import scipy.signal as signal
 
+import numpy as np
+
 import csv
 
 # docLocation = ""
@@ -88,7 +90,7 @@ class createMainWindow(QMainWindow):
         # For testing. Allows for me to view the main dataset and also the peaks found next to each other
         pybutton = QPushButton('Plot Peaks Next To Dataset', self)
         pybutton.resize(100,32)
-        pybutton.move(360, 600)        
+        pybutton.move(480, 550)        
         pybutton.clicked.connect(self.findQrsComplex)
         
     def updatePlot(self, graphicsView):
@@ -106,23 +108,36 @@ class createMainWindow(QMainWindow):
     # Function to detect QRS Complex
     def findQrsComplex(self, graphicsView):
         print("bladlsajdlksajldksajkofjlksklfjlkfja")
-        signalPeaks = signal.find_peaks(ecgDataset, height=0, distance=100)
+        signalPeaks = signal.find_peaks(ecgDataset, height=0, distance=200)
         print(signalPeaks[0])
-    
-        peaks = list()
-    
+        signalPeaksData = signalPeaks[0]
+        peaks = list() #TODO Do not need this if we are using indices to find peaks.
+        
+        ecgDatasetToPlot = []
+        ecgDatasetToPlot.clear()
+        ecgDatasetToPlot = ecgDataset # Temporary dataset to plot
+        
         # Get data from index where we have found a peak because find_peaks gives us the index of peaks and not the actual peaks
-        for dataIndex in signalPeaks[0]:
+        for dataIndex in signalPeaksData:
     
             peaks.append(ecgDataset[dataIndex])
             #print(ecgDataset[dataIndex])
             
             # Append peaks to ecg dataset to be shown. If this is left as is TODO remove peaks
-            ecgDataset.append(ecgDataset[dataIndex])
+            ecgDatasetToPlot.append(ecgDataset[dataIndex])
         
-        self.graphicsView.clear()
-        self.graphicsView.plot(peaks)
+        
+        self.graphicsView.clear() #TODO Need to make a buffer for the data that is stored on the array that i show
+        #self.graphicsView.plot(peaks)
+        self.graphicsView.plot(ecgDatasetToPlot)
     
+      # TODO This probably wont work
+      # Not a robust method. Will not work for people with faster heartrates or extremely low heartrate. Dependant on the distance variable above
+      # 600hz frequency.
+        heartRate = len(signalPeaksData) * 6
+      
+        print("Heart Rate Is: " + str(heartRate))
+      
     # Function that allows for a file to be imported into the program. File information is saved and ready for data to be imported
     def importFile(self):
 

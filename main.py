@@ -14,6 +14,9 @@ import numpy as np
 
 import csv
 
+# Set Pyqtgraph background as white
+pg.setConfigOption('background', 'w')
+
 # docLocation = ""
 numRecords = 0
 # Create a multidimensional array for the dataset.
@@ -78,6 +81,9 @@ class createMainWindow(QMainWindow):
         self.centralwidget = QWidget(self)
         self.graphicsView = pg.PlotWidget(self.centralwidget)
         gridLayout.addWidget(self.graphicsView)
+        
+        # Plot the Axis
+        self.graphicsView.setXRange(0, 10, padding=0)
         
         # Plot the dataset
         self.graphicsView.plot(ecgDataset)

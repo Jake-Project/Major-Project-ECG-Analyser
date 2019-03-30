@@ -1,4 +1,4 @@
-import pandas as panda # Library to enable east use of time series data
+ximport pandas as panda # Library to enable east use of time series data
 
 import sys
 from PyQt5 import QtCore, QtWidgets, QtGui
@@ -22,8 +22,6 @@ numRecords = 0
 # Create a multidimensional array for the dataset.
 # TODO May be best to not have this as global?
 ecgDataset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
-
 
 # Create a multidimensional array for the individual heartbeats that we find.
 # TODO May be best to not have this as global?

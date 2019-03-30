@@ -97,6 +97,9 @@ class createMainWindow(QMainWindow):
             print(ecgData)
             ecgDataLines = [] # To hold different lines because data comes as long string
             
+            # for zero crossing
+            ecgMean = 0.0
+            ecgMeanCounter = 0
             
             previousChars = []
             
@@ -112,12 +115,21 @@ class createMainWindow(QMainWindow):
                 else:
                     if previousChars[0] != 's': # Stops the first line which is made up from chars from being accepted
                         averagedSignal = self.createAverageSignal("".join(previousChars))
+                        
+                        # for zero crossing
+                        ecgMean += averagedSignal
+                        ecgMeanCounter += 1
+                        
                         previousChars.append("," + str(averagedSignal))
                     ecgDataLines.append("".join(previousChars)) # Join list of chars into string
                     #print("Data Line")
                     #print(ecgDataLines)
                     previousChars.clear()
-          
+            
+            print(str(ecgMean))
+            print(str(ecgMeanCounter))
+            print("Mean for zero crossings = " + str(ecgMean / ecgMeanCounter))
+        
             #Save data to CSV
             np.savetxt(docLocation, ecgDataLines, delimiter=",", fmt='%s')
            
@@ -132,7 +144,7 @@ class createMainWindow(QMainWindow):
         
         averagedSignal = total / 9
         print("Averaged Signal: " + str(averagedSignal))
-            
+        
         return averagedSignal
 
 # Call the main function

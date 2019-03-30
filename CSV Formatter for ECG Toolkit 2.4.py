@@ -107,8 +107,12 @@ class createMainWindow(QMainWindow):
                     if meshedData != "\t":
                         previousChars.append(meshedData) # Add chars to new array
                     else:
-                        previousChars.append(",")
+                        previousChars.append(",") # Get rid of tabs and add ',' to make CSV File
+                # Add average of data to the end of the array before adding the line
                 else:
+                    if previousChars[0] != 's': # Stops the first line which is made up from chars from being accepted
+                        averagedSignal = self.createAverageSignal("".join(previousChars))
+                        previousChars.append("," + str(averagedSignal))
                     ecgDataLines.append("".join(previousChars)) # Join list of chars into string
                     #print("Data Line")
                     #print(ecgDataLines)
@@ -117,6 +121,19 @@ class createMainWindow(QMainWindow):
             #Save data to CSV
             np.savetxt(docLocation, ecgDataLines, delimiter=",", fmt='%s')
            
+    # Function that returns the averaged signal to append to the data
+    def createAverageSignal(self, charString):
+        print('This is the char array ' + str(charString))
+        total = 0.0
+        ecgDataInstance = charString.split(",") # Split by the commas and retrieve data as an array to iterate through
+        for x in range(1, 9): # Do not include first position in array because this data is not needed
+            total += float(ecgDataInstance[x]) # Add all of the data together and cast to float
+            print(total)
+        
+        averagedSignal = total / 9
+        print("Averaged Signal: " + str(averagedSignal))
+            
+        return averagedSignal
 
 # Call the main function
 if __name__ == '__main__':

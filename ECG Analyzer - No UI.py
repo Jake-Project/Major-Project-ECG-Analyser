@@ -5,13 +5,6 @@ Created on Mon Apr  1 17:22:38 2019
 @author: rocke
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Mar 11 21:23:59 2019
-
-@author: rocke
-"""
-
 # File that was created in order to process the ECG data from the Welch Allyn System.
 # Data aquisition Flow:
 #   Welch Allyn -> Export To SCP -> Import to ECG Toolkit 2.4 -> 
@@ -108,6 +101,12 @@ class createMainWindow(QMainWindow):
             ecgMean = 0.0
             ecgMeanCounter = 0
             
+            # Test for zero crossings - Uses rolling average
+            ecgRunningMean = 0.0
+            ecgRunningMeanCounter = 0
+            runningMeanDatapoints = []
+            runningMeanMaxDatapoints = 400
+            
             previousChars = []
             
             # Remove all white space and seperate the values
@@ -127,6 +126,15 @@ class createMainWindow(QMainWindow):
                         ecgMean += averagedSignal
                         ecgMeanCounter += 1
                         
+                        # For zero crossings moving average experimental
+                        ecgRunningMean += averagedSignal
+                        ecgRunningMeanCounter += 1
+                        if ecgRunningMeanCounter == runningMeanMaxDatapoints:
+                            averagedPoints = [ecgRunningMean / ecgRunningMeanCounter] * runningMeanMaxDatapoints
+                            runningMeanDatapoints.extend(averagedPoints)
+                            ecgRunningMean = 0.0
+                            ecgRunningMeanCounter = 0
+                        
                         previousChars.append("," + str(averagedSignal))
                         
                         # To save to the averaged signal list
@@ -142,7 +150,7 @@ class createMainWindow(QMainWindow):
             print("Mean for zero crossings = " + str(meanOfData))
             
             # Function to find zero crossings on the averaged signal in the data set
-            self.findZeroCrossings(averagedSignalData, meanOfData)
+            self.findZeroCrossings(averagedSignalData, meanOfData, runningMeanDatapoints, fileLocation)
         
             # Save data to CSV
             # np.savetxt(docLocation, ecgDataLines, delimiter=",", fmt='%s')
@@ -162,7 +170,7 @@ class createMainWindow(QMainWindow):
         return averagedSignal
     
     # Function to find zero crossings in data set
-    def findZeroCrossings(self, averagedEcgData, meanOfData):
+    def findZeroCrossings(self, averagedEcgData, meanOfData, runningMeanDatapoints, graphName):
         print("Finding Zero Crossings")
         
         lastDataPoint = meanOfData
@@ -170,19 +178,49 @@ class createMainWindow(QMainWindow):
         dataUnder = 0
         dataOver = 0
         
+        # To colour the zero crossings differently
+        zeroCrossingCounter = 0
+        zeroCrossingPlotArray = []
+        
         for dataPoint in averagedEcgData:
             
+            # TODO maybe remove this
+            zeroCrossingCounter += 1
+            zeroCrossingPlotArray.append(dataPoint)
+            
             # If data has gone above crossing point
-            if dataPoint > meanOfData and lastDataPoint < meanOfData:
+            if dataPoint > runningMeanDatapoints[zeroCrossingCounter] and lastDataPoint < runningMeanDatapoints[zeroCrossingCounter]:
                 dataOver += 1
+                # TODO - Testing
+                plt.plot(zeroCrossingPlotArray)
+                zeroCrossingPlotArray.clear()
+                toDoWillyWonka = [np.nan] * zeroCrossingCounter
+                zeroCrossingPlotArray.extend(toDoWillyWonka)
                 
             # If data has gone below crossing point    
-            elif dataPoint < meanOfData and lastDataPoint > meanOfData:
+            elif dataPoint < runningMeanDatapoints[zeroCrossingCounter] and lastDataPoint > runningMeanDatapoints[zeroCrossingCounter]:
                 dataUnder += 1
+                # TODO - Testing 
+                plt.plot(zeroCrossingPlotArray)
+                zeroCrossingPlotArray.clear()
+                toDoWillyWonka = [np.nan] * zeroCrossingCounter
+                zeroCrossingPlotArray.extend(toDoWillyWonka)
+                
+                
                 
             lastDataPoint = dataPoint # Set last datapoint to this data point
         
         print('Data Over = ' + str(dataOver) + ' And Data Under = ' + str(dataUnder))
+        
+       # plt.plot(averagedEcgData) # Plot ecg data
+        
+        plt.plot(runningMeanDatapoints)
+        
+        # To add the mean of the data to the graph
+        plt.plot(np.repeat(meanOfData, len(averagedEcgData)))
+        
+        plt.savefig(graphName +'.png')
+        plt.cla()
         
         #for csvData in ecgData:
          #   print("Data = " + str(ecgData))

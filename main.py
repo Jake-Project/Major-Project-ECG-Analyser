@@ -23,8 +23,6 @@ numRecords = 0
 # TODO May be best to not have this as global?
 ecgDataset = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-
-
 # Create a multidimensional array for the individual heartbeats that we find.
 # TODO May be best to not have this as global?
 heartbeatArray = [[0 for x in range(2)] for y in range(2)]

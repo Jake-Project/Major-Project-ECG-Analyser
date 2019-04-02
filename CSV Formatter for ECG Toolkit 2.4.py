@@ -154,8 +154,8 @@ class createMainWindow(QMainWindow):
     def findZeroCrossings(self, ecgData):
         print("Finding Zero Crossings")
         
-        for csvData in ecgData:
-            print("Data = " + str(ecgData))
+        #for csvData in ecgData:
+         #   print("Data = " + str(ecgData))
 
 # Call the main function
 if __name__ == '__main__':

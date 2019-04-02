@@ -129,6 +129,9 @@ class createMainWindow(QMainWindow):
             print(str(ecgMean))
             print(str(ecgMeanCounter))
             print("Mean for zero crossings = " + str(ecgMean / ecgMeanCounter))
+            
+            # Function to find zero crossings in data set
+            self.findZeroCrossings(ecgDataLines)
         
             #Save data to CSV
             np.savetxt(docLocation, ecgDataLines, delimiter=",", fmt='%s')
@@ -146,6 +149,13 @@ class createMainWindow(QMainWindow):
         print("Averaged Signal: " + str(averagedSignal))
         
         return averagedSignal
+    
+    # Function to find zero crossings in data set
+    def findZeroCrossings(self, ecgData):
+        print("Finding Zero Crossings")
+        
+        for csvData in ecgData:
+            print("Data = " + str(ecgData))
 
 # Call the main function
 if __name__ == '__main__':

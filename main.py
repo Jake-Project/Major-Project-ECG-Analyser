@@ -1,4 +1,4 @@
-ximport pandas as panda # Library to enable east use of time series data
+import pandas as panda # Library to enable east use of time series data
 
 import sys
 from PyQt5 import QtCore, QtWidgets, QtGui

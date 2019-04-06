@@ -5,13 +5,6 @@ Created on Mon Apr  1 17:22:38 2019
 @author: rocke
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Mar 11 21:23:59 2019
-
-@author: rocke
-"""
-
 # File that was created in order to process the ECG data from the Welch Allyn System.
 # Data aquisition Flow:
 #   Welch Allyn -> Export To SCP -> Import to ECG Toolkit 2.4 -> 
@@ -22,6 +15,8 @@ from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QSizePoli
 from PyQt5.QtCore import QSize 
 
 import matplotlib.pyplot as plt
+
+from scipy.interpolate import interp1d # Maybe take out if not used
 
 
 import os # Needed for folders
@@ -87,13 +82,13 @@ class createMainWindow(QMainWindow):
                     print("File to open: " + str(folderInformation + '/' + file)) 
                     
                     # TODO - Method that opens each file individually to process the data
-                    self.parseCsv(folderInformation + '/' + file)
+                    self.parseCsv(folderInformation, file)
             
     # Method to parse the CSV data
-    def parseCsv(self, fileLocation):
+    def parseCsv(self, folderLocation, fileName):
         print("Parsing CSV data to an array")
         
-        file = open(fileLocation, 'r')
+        file = open(folderLocation + '/' + fileName, 'r')
 
         # Read in the data
         with file:
@@ -107,6 +102,12 @@ class createMainWindow(QMainWindow):
             # for zero crossing
             ecgMean = 0.0
             ecgMeanCounter = 0
+            
+            # Test for zero crossings - Uses rolling average
+            ecgRunningMean = 0.0
+            ecgRunningMeanCounter = 0
+            runningMeanDatapoints = []
+            runningMeanMaxDatapoints = 400
             
             previousChars = []
             
@@ -127,6 +128,15 @@ class createMainWindow(QMainWindow):
                         ecgMean += averagedSignal
                         ecgMeanCounter += 1
                         
+                        # For zero crossings moving average experimental
+                        ecgRunningMean += averagedSignal
+                        ecgRunningMeanCounter += 1
+                        if ecgRunningMeanCounter == runningMeanMaxDatapoints:
+                            averagedPoints = [ecgRunningMean / ecgRunningMeanCounter] * runningMeanMaxDatapoints
+                            runningMeanDatapoints.extend(averagedPoints)
+                            ecgRunningMean = 0.0
+                            ecgRunningMeanCounter = 0
+                        
                         previousChars.append("," + str(averagedSignal))
                         
                         # To save to the averaged signal list
@@ -142,7 +152,7 @@ class createMainWindow(QMainWindow):
             print("Mean for zero crossings = " + str(meanOfData))
             
             # Function to find zero crossings on the averaged signal in the data set
-            self.findZeroCrossings(averagedSignalData, meanOfData)
+            self.findZeroCrossings(averagedSignalData, meanOfData, runningMeanDatapoints, folderLocation, fileName)
         
             # Save data to CSV
             # np.savetxt(docLocation, ecgDataLines, delimiter=",", fmt='%s')
@@ -162,7 +172,7 @@ class createMainWindow(QMainWindow):
         return averagedSignal
     
     # Function to find zero crossings in data set
-    def findZeroCrossings(self, averagedEcgData, meanOfData):
+    def findZeroCrossings(self, averagedEcgData, meanOfData, runningMeanDatapoints, folderLocation, fileName):
         print("Finding Zero Crossings")
         
         lastDataPoint = meanOfData
@@ -170,22 +180,71 @@ class createMainWindow(QMainWindow):
         dataUnder = 0
         dataOver = 0
         
+        # To colour the zero crossings differently
+        zeroCrossingCounter = 0
+        zeroCrossingPlotArray = []
+        
         for dataPoint in averagedEcgData:
             
+            # TODO maybe remove this
+            zeroCrossingCounter += 1
+            zeroCrossingPlotArray.append(dataPoint)
+            
             # If data has gone above crossing point
-            if dataPoint > meanOfData and lastDataPoint < meanOfData:
+            if dataPoint > runningMeanDatapoints[zeroCrossingCounter-1] and lastDataPoint < runningMeanDatapoints[zeroCrossingCounter-1]:
                 dataOver += 1
+                # TODO - Testing
+                plt.plot(zeroCrossingPlotArray)
+                zeroCrossingPlotArray.clear()
+                toDoWillyWonka = [np.nan] * zeroCrossingCounter
+                zeroCrossingPlotArray.extend(toDoWillyWonka)
                 
             # If data has gone below crossing point    
-            elif dataPoint < meanOfData and lastDataPoint > meanOfData:
+            elif dataPoint < runningMeanDatapoints[zeroCrossingCounter-1] and lastDataPoint > runningMeanDatapoints[zeroCrossingCounter-1]:
                 dataUnder += 1
+                # TODO - Testing 
+                plt.plot(zeroCrossingPlotArray)
+                zeroCrossingPlotArray.clear()
+                toDoWillyWonka = [np.nan] * zeroCrossingCounter
+                zeroCrossingPlotArray.extend(toDoWillyWonka)
+                
+                
                 
             lastDataPoint = dataPoint # Set last datapoint to this data point
         
         print('Data Over = ' + str(dataOver) + ' And Data Under = ' + str(dataUnder))
         
+        # plt.plot(averagedEcgData) # Plot ecg data
+        
+        y = []
+       
+        for x in range(1, 6001):
+            y.append(x)
+        
+        # blah = interp1d(runningMeanDatapoints, y, kind='cubic')
+        
+        plt.plot(runningMeanDatapoints)
+        
+        # To add the mean of the data to the graph
+        plt.plot(np.repeat(meanOfData, len(averagedEcgData)))
+        
+        folderToSaveTo = folderLocation +'/ECG Data plotted against Moving Point Average Graphs/'
+        
+        # Make sure directory exists to save file to
+        self.saveGraph(folderToSaveTo, fileName+'.png')
+        
         #for csvData in ecgData:
          #   print("Data = " + str(ecgData))
+         
+    # Function to make a directory in python to save the graphs to     
+    def saveGraph(self, folderToSaveTo, fileName):
+        try:
+            os.mkdir(folderToSaveTo)
+            print('The Directory: ' + folderToSaveTo + ' Has Been Created. Saving Data')
+        except:
+            print('The Directory: ' + folderToSaveTo + ' Already Exists. Saving Data')
+        plt.savefig(folderToSaveTo + fileName)
+        plt.cla() # Clear the plot
 
 # Call the main function
 if __name__ == '__main__':

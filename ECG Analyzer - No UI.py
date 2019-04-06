@@ -228,7 +228,7 @@ class createMainWindow(QMainWindow):
         # To add the mean of the data to the graph
         plt.plot(np.repeat(meanOfData, len(averagedEcgData)))
         
-        folderToSaveTo = folderLocation +'/automatedGraphs/'
+        folderToSaveTo = folderLocation +'/ECG Data plotted against Moving Point Average Graphs/'
         
         # Make sure directory exists to save file to
         self.saveGraph(folderToSaveTo, fileName+'.png')

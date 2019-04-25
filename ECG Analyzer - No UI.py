@@ -16,6 +16,9 @@ from PyQt5.QtCore import QSize
 
 import matplotlib.pyplot as plt
 
+#todo do i need this?
+import math
+
 from scipy.interpolate import interp1d # Maybe take out if not used
 
 
@@ -197,7 +200,7 @@ class createMainWindow(QMainWindow):
         return averagedSignal
     
     
-    # Function to calculate the cubic interpolation of the running average sections of the signal
+    # Function to calculate the cubic spline interpolation of the running average sections of the signal
     def calculateCubicInterpolation(self, averagedSignalData, singularMeanOfData, runningMeanDatapoints, folderLocation, fileName):
         print("Calculating the Cubic Interpolation of the running mean sections")
         
@@ -239,6 +242,8 @@ class createMainWindow(QMainWindow):
         # Make sure directory exists to save file to
         self.saveGraph(folderToSaveTo, fileName+'.png')
         
+        # Can possibly remove later on.....
+        self.removeDrift(averagedSignalData, ynew, folderLocation, fileName)
         
         # Function to find zero crossings for the averaged signal of the dataset using the 
         self.findZeroCrossings(averagedSignalData, 0, ynew, folderLocation, fileName)
@@ -307,13 +312,13 @@ class createMainWindow(QMainWindow):
         self.saveGraph(folderToSaveTo, fileName+'.png')
         
         #Probably remove from here and put elsewhere......
-        self.calculateFft(averagedEcgData, folderLocation, fileName)
+        self.calculateFft(averagedEcgData, runningMeanDatapoints, folderLocation, fileName)
         #for csvData in ecgData:
          #   print("Data = " + str(ecgData))
 
     
     # Calculate the FFT using the averaged ECG Data
-    def calculateFft(self, averagedEcgData, folderLocation, fileName):
+    def calculateFft(self, averagedEcgData, runningMeanDatapoints, folderLocation, fileName):
         averageEcgFft = np.fft.fft(np.array(averagedEcgData).flatten())
         # TODO can remove this as well later possibly
         folderToSaveTo = folderLocation +'/Graphs/Averaged Signals With FFT/'
@@ -322,11 +327,60 @@ class createMainWindow(QMainWindow):
         
         folderToSaveTo = folderLocation +'/Graphs/Averaged Signals With FFT FREQ/'
         # TODO - remove me. This line below is a direct copy for testing
-        freq = np.fft.fftfreq(len(averagedEcgData), 1/720.)
-
-        plt.plot(freq, np.abs(averageEcgFft))
+        freq = np.fft.fftfreq(len(averagedEcgData))
+        
+        print('freq = ' + str(freq))
+        print(len(freq))
+        
+        # Below block is copied from here http://scipy-lectures.org/intro/scipy/auto_examples/plot_fftpack.html
+        power = np.abs(averageEcgFft)        
+        pos_mask = np.where(freq > 0)
+        freqs = freq[pos_mask]
+        peak_freq = freqs[power[pos_mask].argmax()]
+        averageEcgFft[np.abs(freq) < peak_freq] = 0
+        filtered_sig = np.fft.ifft(averageEcgFft)
+        plt.plot(filtered_sig)
+        plt.plot(runningMeanDatapoints)
         self.saveGraph(folderToSaveTo, fileName+'.png')
+        
+        #plots the freq against the length
+        #plt.plot(freq, np.abs(averageEcgFft))
+        #self.saveGraph(folderToSaveTo, fileName+'.png')
          
+    # TODO May be a load of shit - worth giving it a go
+    # Function that will eliminate baseline drift of the biological ECG signal
+    def removeDrift(self, averagedEcgData, runningMeanDatapoints, folderLocation, fileName):
+        newData = []
+        print('Length of averaged data = ' + str(len(averagedEcgData)) + '. Length of running mean datapoints' + str(len(runningMeanDatapoints)))
+        counter = 0
+        
+        # THis line is a copy - Make it yours
+        runningMeanDatapoints = runningMeanDatapoints[:len(runningMeanDatapoints)-9]
+        
+        print('LOLOLOL' + str(len(runningMeanDatapoints)))
+        for data in runningMeanDatapoints:
+            
+            newData.append(averagedEcgData[counter] - self.distance(0, data))
+            counter += 1
+    
+        plt.plot(newData)
+        folderToSaveTo = folderLocation +'/Graphs/BSHDSAJHDJA/'
+        self.saveGraph(folderToSaveTo, fileName+'.png')
+            
+    
+    # TODO this is totally someone elses function. If it needs keeping then it needs to be deleted and rewritten
+    def distance(self, a, b):
+        if (a == b):
+            return 0
+        elif (a < 0) and (b < 0) or (a > 0) and (b > 0):
+            if (a < b):
+                return (abs(abs(a) - abs(b)))
+            else:
+                return -(abs(abs(a) - abs(b)))
+        else:
+            return math.copysign((abs(a) + abs(b)),b)
+            
+
     # Function to make a directory in python to save the graphs to     
     def saveGraph(self, folderToSaveTo, fileName):
         try:

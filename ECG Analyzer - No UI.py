@@ -429,3 +429,4 @@ if __name__ == '__main__':
   # Cubic Spline Interpolation or piecewise linear https://www.google.co.uk/search?q=piecewise+linear&client=opera&hs=9N0&source=lnms&tbm=isch&sa=X&ved=0ahUKEwifx8eq8-HhAhXFyaQKHS4tB6UQ_AUIDigB&biw=1496&bih=723
   # Add availability to when i can demonstrate my project
   # Can get rid of +'png' from all methods calling the save function and add it to the parameters of the save function
+  # Write another method for finding the normal mean - Plot both the normal and the drifted one on a graph to show

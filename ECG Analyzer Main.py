@@ -25,12 +25,13 @@ import matplotlib.pyplot as plt
 
 from signalProcessing import AverageEcgLeads
 from signalProcessing import QrsDetection
+from signalProcessing import Fft
+from signalProcessing import Util
 
 
 
 import os # Needed for folders
 import sys
-import csv
 import numpy as np
 
 
@@ -56,7 +57,6 @@ class createMainWindow(QMainWindow):
  
         gridLayout = QGridLayout(self)     
         centralWidget.setLayout(gridLayout)  
-
         
         # File Menu options
         file = self.menuBar().addMenu('File')
@@ -71,8 +71,6 @@ class createMainWindow(QMainWindow):
         actionOpen.triggered.connect(self.importFiles)
         # actionOpen = Action performed when button is pressed.
         # .triggered.connect causes the action to be performed.
-        
-        
         
         
     # Function that allows for files to be imported into the program.
@@ -119,29 +117,16 @@ class createMainWindow(QMainWindow):
             ecgData = file.read()
             print('There are ' + str(sum(1 for row in ecgData)) + ' Records in the CSV data')
             
-            ecgDataLines = [] # To hold all of the data for all 8 leads including the averaged signal
+            rawDataLines = [] # To hold all of the data for all 8 lead
             averagedSignalData = [] # To hold only the data for the averaged signal
-            
-            # for calculating the total mean of the data
-            ecgMean = 0.0
-            ecgMeanCounter = 0
-            
-            # TODO Change variable names if they make no sense - Also this isnt a test anymore
-            # Test for zero crossings - Uses rolling average
-            ecgRunningMean = 0.0
-            ecgRunningMeanCounter = 0
-            runningMeanDatapoints = []
-            runningMeanMaxDatapoints = 400
-            
-            # For testing the Cubic Interpolation - TODO May be wrong... could possibly remove
-            runningMeanDatapointsForCubicInterpolation = []
             
             previousChars = []
             
-            # Remove all white space from the data and seperate the values
+            # This for loop Removes all white space from the data and seperate the values
+            # The average signal data is also created
             for meshedData in ecgData: # For each character in the csv data
                 
-                # If CSV data is a new line check if it is a tab
+                # If CSV data isn't a new line check if it is a tab
                 if meshedData != "\n": 
                     # If CSV data is a tab, add to array
                     if meshedData != "\t":
@@ -151,77 +136,75 @@ class createMainWindow(QMainWindow):
                 
                 # Add average of data to the end of the array before adding the line
                 else:
-                    # Stops the first line which is made up from chars from being accepted
+                    # Stops the first line which is made up from chars from being accepted (samplenr is first thing in data when exported as csv)
                     if previousChars[0] != 's': 
-                        # create the averaged signal from the other 8 leads
+                        
+                        # create the averaged signal from the other 8 leads for this row of data
                         averagedSignal = AverageEcgLeads.createAveragedSignal("".join(previousChars))
 
-                        # for zero crossing
-                        ecgMean += averagedSignal
-                        ecgMeanCounter += 1
-                        
-                        # For zero crossings moving average experimental
-                        ecgRunningMean += averagedSignal
-                        ecgRunningMeanCounter += 1
-                        if ecgRunningMeanCounter == runningMeanMaxDatapoints:
-                            averagedPoints = [ecgRunningMean / ecgRunningMeanCounter] * runningMeanMaxDatapoints
-                            runningMeanDatapoints.extend(averagedPoints)
-                            runningMeanDatapointsForCubicInterpolation.append(ecgRunningMean/ecgRunningMeanCounter)
-                            ecgRunningMean = 0.0
-                            ecgRunningMeanCounter = 0
-                        
+        
+                        # TODO WHAT DOES THIS DO
                         previousChars.append("," + str(averagedSignal))
                         
                         # To save to the averaged signal list
                         averagedSignalData.append(averagedSignal)
-                    ecgDataLines.append("".join(previousChars)) # Join list of chars into string
+                        
+                    rawDataLines.append("".join(previousChars)) # Join list of chars into string
                     #print("Data Line")
-                    #print(ecgDataLines)
+                    #print(rawDataLines)
                     previousChars.clear()
+
+            # The overall mean of the data without any more processing
+            meanOfData = AverageEcgLeads.calculateMeanOfData(averagedSignalData)
             
-            print(str(ecgMean))
-            print(str(ecgMeanCounter))
-            meanOfData = ecgMean / ecgMeanCounter
-            print("Mean for zero crossings = " + str(meanOfData))
+            # The running mean datapoints which are needed for cubic interpolation.
+            runningMeanDatapoints = AverageEcgLeads.calculateRunningMean(averagedSignalData)
             
             # Calculate Cubic Interpolation
             # Uses the running average sections previously calculated to find the moving average
-            cubiclyInterpolatedDatapoints = AverageEcgLeads.calculateCubicInterpolation(averagedSignalData, runningMeanDatapointsForCubicInterpolation, runningMeanDatapoints, folderLocation, fileName)
+            cubiclyInterpolatedDatapoints = AverageEcgLeads.calculateCubicInterpolation(averagedSignalData, runningMeanDatapoints, folderLocation, fileName)
             
             # Removes the drift from the averaged signal, which makes the data uniform
-            AverageEcgLeads.removeDrift(averagedSignalData, cubiclyInterpolatedDatapoints, folderLocation, fileName)
+            averagedEcgDriftRemoved = AverageEcgLeads.removeDrift(averagedSignalData, cubiclyInterpolatedDatapoints, meanOfData, folderLocation, fileName)
             
+            # Finds the R-Peaks in the signal
+            rPeaks = QrsDetection.findQrsComplex(averagedEcgDriftRemoved, folderLocation, fileName)
             
-            # Save graph of running mean datapoints
-            plt.plot(runningMeanDatapoints)
-            folderToSaveTo = folderLocation +'/Graphs/Running Mean Data Points/'
-        
-            # Make sure directory exists to save file to
-            self.saveGraph(folderToSaveTo, fileName+'.png')
-            
-            
-            # Save graph of averaged signals with no other processing
-            plt.plot(averagedSignalData)
-            folderToSaveTo = folderLocation +'/Graphs/Averaged Signals Without Further Processing/'
-        
-            # Make sure directory exists to save file to
-            self.saveGraph(folderToSaveTo, fileName+'.png')
             
             # TODO Can add this again - But need to make a new folder for it possibly
             # Function to find zero crossings on the averaged signal in the data set
-            # self.findZeroCrossings(averagedSignalData, meanOfData, runningMeanDatapoints, folderLocation, fileName)
-        
+            # QrsDetection.findZeroCrossings(averagedSignalData, meanOfData, runningMeanDatapoints, folderLocation, fileName)
+            
             # Save data to CSV
-            # np.savetxt(docLocation, ecgDataLines, delimiter=",", fmt='%s')
-
-
-# Call the main function
+            # np.savetxt(docLocation, rawDataLines, delimiter=",", fmt='%s')
+  
+  # Call the main function
 if __name__ == '__main__':
-  def run_gui():
-        print("UI Running")
+  def run_folder_selector_ui():
+        print("UI Running - User can now select the folder containing their data")
         # Boiler plate code - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder
         app = QtWidgets.QApplication(sys.argv)
         mainWin = createMainWindow()
         mainWin.show()
         app.exec_()
-  run_gui()
+  
+  # Allows for the document selector method to run
+  run_folder_selector_ui()
+  
+   ## TODO
+  # Change names from functions to methods and vice versa. Look up naming concepts
+  # Write tests for the code
+  # Break into seperate files if needed
+  # Use correct naming constraints. Should it be  house_party or houseParty? is it the same for both methods, functions and variables?
+  # Apply some sort of filter on the ECG...
+  # Fix issue with UI not working correctly for the file button. Maybe add a graphic
+  # Change readme to explain how to use this program compared to the other programs
+  # Make output in console look neater
+  # Change scale on output from matplotlib so that instead of being every 600 seconds its every second
+  # Change names of graph name and x y axis on matplotlib for what they actually are (Some are in freq domain, others in mv)
+  # Look into subplots
+  # Make a plot for the raw data as well
+  # Cubic Spline Interpolation or piecewise linear https://www.google.co.uk/search?q=piecewise+linear&client=opera&hs=9N0&source=lnms&tbm=isch&sa=X&ved=0ahUKEwifx8eq8-HhAhXFyaQKHS4tB6UQ_AUIDigB&biw=1496&bih=723
+  # Add availability to when i can demonstrate my project
+  # Can get rid of +'png' from all methods calling the save function and add it to the parameters of the save function
+  # Write another method for finding the normal mean - Plot both the normal and the drifted one on a graph to show

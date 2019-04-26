@@ -24,7 +24,7 @@ from PyQt5.QtCore import QSize
 import matplotlib.pyplot as plt
 
 from signalProcessing import AverageEcgLeads
-from signalProcessing import QrsDetection
+from signalProcessing import PeakDetection
 from signalProcessing import Fft
 from signalProcessing import Util
 
@@ -111,13 +111,15 @@ class createMainWindow(QMainWindow):
         print("Parsing CSV data to an array")
         # Opens the folderLocation and fileName to read.
         file = open(folderLocation + '/' + fileName, 'r')
-
+        
+        fileName = fileName.replace(".csv", "") # Removes the .csv part
+        
         # Read in the data
         with file:
             ecgData = file.read()
             print('There are ' + str(sum(1 for row in ecgData)) + ' Records in the CSV data')
             
-            rawDataLines = [] # To hold all of the data for all 8 lead
+            rawDataLines = [] # To hold all of the data for all 8 leads
             averagedSignalData = [] # To hold only the data for the averaged signal
             
             previousChars = []
@@ -158,18 +160,27 @@ class createMainWindow(QMainWindow):
             meanOfData = AverageEcgLeads.calculateMeanOfData(averagedSignalData)
             
             # The running mean datapoints which are needed for cubic interpolation.
-            runningMeanDatapoints = AverageEcgLeads.calculateRunningMean(averagedSignalData)
+            runningMeanDatapoints = AverageEcgLeads.calculateRunningMean(averagedSignalData, 400)
             
-            # Calculate Cubic Interpolation
+            # Calculate Cubic Interpolation3
             # Uses the running average sections previously calculated to find the moving average
             cubiclyInterpolatedDatapoints = AverageEcgLeads.calculateCubicInterpolation(averagedSignalData, runningMeanDatapoints, folderLocation, fileName)
             
             # Removes the drift from the averaged signal, which makes the data uniform
             averagedEcgDriftRemoved = AverageEcgLeads.removeDrift(averagedSignalData, cubiclyInterpolatedDatapoints, meanOfData, folderLocation, fileName)
             
-            # Finds the R-Peaks in the signal
-            rPeaks = QrsDetection.findQrsComplex(averagedEcgDriftRemoved, folderLocation, fileName)
+            # TODO POSSIBLY REMOVE
+            # IF THIS WORKS (THEN GREAT) BUT IF IT DOESNT, TAKE THE RUNNINGMEANMAX VARIABLE AND PUT IT BACK TO 400 IN SIGNAL PROCESSING. IF THIS DOES WORK WE WILL NEED CUBIC INTERPOLATION TO FILL IN GAPS
+            averagedEcgDriftRemoved = AverageEcgLeads.calculateRunningMean(averagedEcgDriftRemoved, runningMeanMaxDatapoints = 2)
             
+            # Finds the R-Peaks in the signal
+            rPeaks = PeakDetection.findQrsComplex(averagedEcgDriftRemoved, folderLocation, fileName)
+            
+            # To find individual beats
+            startEndOfBeats = Util.findIndividualBeats(averagedEcgDriftRemoved, rPeaks, folderLocation, fileName)
+            
+            # To try and find the P and T Peaks within the individual beats
+            PeakDetection.findPeaks(averagedEcgDriftRemoved, startEndOfBeats, folderLocation, fileName)
             
             # TODO Can add this again - But need to make a new folder for it possibly
             # Function to find zero crossings on the averaged signal in the data set

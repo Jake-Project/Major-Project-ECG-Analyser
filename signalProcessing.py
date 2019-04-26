@@ -55,7 +55,8 @@ class AverageEcgLeads:
         
     # Method that takes a mean after n amount of signals have been iterated through
     # This data can then be used with cubic interpolation to create a smooth curve which represents a running mean
-    def calculateRunningMean(averagedSignalData):
+    # Amount of signals for mean to be calculated on (runningMeanMaxDatapoints) Should be divisible by 6000
+    def calculateRunningMean(averagedSignalData, runningMeanMaxDatapoints):
         
         # Array to hold the running mean datapoints
         runningMeanDatapoints = []
@@ -64,8 +65,7 @@ class AverageEcgLeads:
         ecgRunningMean = 0.0
         ecgRunningMeanCounter = 0
         
-        # Amount of signals for mean to be calculated on (Should be divisible by 6000)
-        runningMeanMaxDatapoints = 400
+        # TODO THIS FUNCTION COULD FILL IN THE GAPS USING CUBIC INTERPOLATION!!!!! :D
         
         # Run through all of the data in the averaged signal
         for data in averagedSignalData:
@@ -107,7 +107,7 @@ class AverageEcgLeads:
         #plt.plot(averagedSignalData, 'o', ynew, '--')
         #plt.legend(['Averaged Signal Data', 'Cubic Interpolation Of Running Average Sections'], loc='best')
         
-        folderToSaveTo = folderLocation +'/Graphs/Cubic Interpolation Paired With Averaged Signal Data/'
+        folderToSaveTo = folderLocation +'/Graphs/Part 1 - (Running Mean Cubic Interpolation Paired With Averaged Signal Data)/'
         
         # Make sure directory exists to save file to
         Util.saveGraph(folderToSaveTo, fileName+'.png')
@@ -141,7 +141,7 @@ class AverageEcgLeads:
         # Gives gaps inbetween subplots
         plt.tight_layout()
         
-        folderToSaveTo = folderLocation +'/Graphs/Averaged ECG Data (Drift Removed Vs No Processing)/'
+        folderToSaveTo = folderLocation +'/Graphs/Part 2 - (Averaged ECG Data (Drift Removed Vs No Processing)/'
         Util.saveGraph(folderToSaveTo, fileName+'.png')
         
         return ecgSignalWithDriftRemoved
@@ -151,8 +151,64 @@ class AverageEcgLeads:
     
 
 
-class QrsDetection:
+class PeakDetection:
     
+    # To try and find P, T Peaks
+    # Will not work on individuals with unusual rhythms as the p and t will be off
+    def findPeaks(averagedEcgData, startEndOfBeats, folderLocation, fileName):
+        
+        prsSectionIndexs = []
+        prsSectionPeaks = [] 
+        
+        # To hold the last place indexed
+        lastIndex = 0
+        
+        # FOR TESTING TODO
+        counter = 0
+        
+        # Get the mean to find the height we are looking for the peaks at
+        meanOfData = AverageEcgLeads.calculateMeanOfData(averagedEcgData)
+        
+        # Slice Array with point A and B (Start and end of the beat) and try to find 3 peaks
+        for index in startEndOfBeats:
+            # If index == 0, skip
+            if index != 0:
+                # TODO - need to write distance function to calculate the distance because this will  change! # Distance was at 100
+                signalPeaks = signal.find_peaks(averagedEcgData[lastIndex:index], width=3, height=meanOfData[0]-20, distance = 40)
+                
+                # For testing purposes only
+                plt.plot(averagedEcgData[lastIndex:index], '-', signalPeaks[0], signalPeaks[1]['peak_heights'], 'o')
+                plt.legend(['ECG Signal', 'PRS-Peaks'], loc='best')
+                plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(meanOfData[0]-50))
+                plt.title('Single Beat PRS-Peaks Plotted Against ECG Data', fontsize = 20)
+                folderToSaveTo = folderLocation +'/Graphs/Part 5 - Individual Heart Beats Plotted Against PRS-Peaks/'
+                # Make sure directory exists to save file to
+                Util.saveGraph(folderToSaveTo, fileName + " BEAT " + str(counter) + '.png') 
+                counter += 1
+                
+                # Because we sliced the array, the index's are incorrect. We need to add the original index to the numbers first
+                # We will append to the array at the same time
+                for slicedIndex in signalPeaks[0]:
+                    prsSectionIndexs.append(lastIndex + slicedIndex)
+                
+                prsSectionPeaks.extend(signalPeaks[1]['peak_heights'])
+                
+                # SOME SORT OF FILTER TO REMOVE BAD PEAKS
+                
+                lastIndex = index
+        
+        # Adding the averagedEcgData to the graph
+        plt.plot(averagedEcgData, '-', prsSectionIndexs, prsSectionPeaks, 'o')
+        plt.legend(['ECG Signal', 'PRS-Peaks'], loc='best')
+        plt.title('PRS-Peaks Plotted Against ECG Data', fontsize = 20)
+        
+        folderToSaveTo = folderLocation +'/Graphs/Part 6 - PRS-Peaks Plotted Against Averaged ECG Signal With Biological Drift Removed/'
+        
+        # Make sure directory exists to save file to
+        Util.saveGraph(folderToSaveTo, fileName+'.png') 
+    
+    # TODO - LOOK AT THE HEARTBEAT SECTION FINDING PART. THERE IS A PICTURE SAVED IN GRAPHS. IMPORTANT
+    # THIS METHOD BREAKS DOWN AND CEASES TO WORK IF THE HEARTRATE SPEEDS UP OR DOWN TOO MUCH
     # Function to detect peaks in the data.
     # Heart Rate is then calculated from these peaks and is saved into an Excel file
     def findQrsComplex(averagedEcgData, folderLocation, fileName):
@@ -162,17 +218,25 @@ class QrsDetection:
         print(signalPeaks[0])
         print(signalPeaks[1]['peak_heights'])
         
+        # Setup an array with data inside to save to a file
+        heartRateDataToSave = [[0 for x in range(2)] for y in range(2)] # Initializes array as 2x2 
+        heartRateDataToSave[0][0] = "Heart Rate"
+        heartRateDataToSave[0][1] = "Heart Rate Zone"
         
         # Frequency of Welch Allyn System is 600Hz and it runs clinical ECG's for 10 seconds.
         # To get a minute, this needs to be multiplied by 6
         heartRate = len(signalPeaks[0]) * 6
+        # Adding the heartrate to the array
+        heartRateDataToSave[1][0] = str(heartRate)
         
         # Calculates the Heart Rate zone of the participant (Uses 25 year old for calculation)
         heartRateZone = Util.calculateHeartRateZone(heartRate)
+        # Adding Heart Rate Zone to array
+        heartRateDataToSave[1][1] = heartRateZone
         print("Participants Heart Rate Is Equal To " + str(heartRate) + " And Their Heart Rate Zone Is " + heartRateZone)
         
         # Save heart rate data to file for user
-        Util.saveToCsv(folderLocation +'/Results/')
+        Util.saveToCsv(heartRateDataToSave, folderLocation +'/Results/', fileName + ' Results.csv')
         
         # Adding the averagedEcgData to the graph
         plt.plot(averagedEcgData, '-', signalPeaks[0], signalPeaks[1]['peak_heights'], 'o')
@@ -180,7 +244,7 @@ class QrsDetection:
         plt.title('R-Peaks Plotted Against ECG Data', fontsize = 20)
         plt.text(0.5, 0.5, 'Heart Rate = ' + str(heartRate))
         
-        folderToSaveTo = folderLocation +'/Graphs/fdfdsdadga/'
+        folderToSaveTo = folderLocation +'/Graphs/Part 3 - (R-Peaks Plotted Against Averaged ECG Data With Biological Drift Removed)/'
         
         # Make sure directory exists to save file to
         Util.saveGraph(folderToSaveTo, fileName+'.png') 
@@ -239,6 +303,68 @@ class Util:
         # Save and clear the plot
         plt.savefig(folderToSaveTo + fileName)
         plt.cla() # Clear the plot
+    
+    
+    # TODO THIS IS FLAWED SOMEHOW. LOOK AT IMPORTANT PHOTO WHICH HAS BEEN SAVED (MARKED IMPORTANT)
+    # THIS HAPPENED WHEN USING RUNNING AVERAGE ON ECG SIGNAL AND THEN RUNNING THAT THROUGH THIS METHOD
+    # Method to find the individual beats 
+    def findIndividualBeats(averagedEcgData, signalPeaks, folderLocation, fileName):
+        
+        # Array to hold the datapoints index's inbetween the peaks - Meaning the end of one beat and the start of the next
+        startOfBeatArray = []
+        
+        # Counter for r sections iterated through
+        rSectionCounter = 0
+        
+        # To remember the last section which we visited
+        previousSection = 0
+        
+        # For the amount of peaks that we have, calculate midway point between peaks
+        for signalLocation in signalPeaks[0]:
+            # Add '0' to array because we need to start here (first peak doesnt have an obvious midpoint before it)
+            if rSectionCounter == 0:
+                startOfBeatArray.append(0)
+                
+                # Set the current section as the previous section
+                previousSection = signalLocation
+                # Add 1 to the counter
+                rSectionCounter += 1
+                
+            # Find the midway point between this peak and the last peak and append to array.
+            else:
+                # Find difference between numbers and then divide by 2 and round up
+                midwayPointDifference = int(round((signalLocation - previousSection) / 2))
+                startOfBeatArray.append(signalLocation - midwayPointDifference)
+                
+                # if this is the last peak we can add 6000 to array because there are no obvious mid points past this location
+                if rSectionCounter == len(signalPeaks[0]) - 1:
+                    startOfBeatArray.append(len(averagedEcgData) - 1)
+                
+                # Set the current section as the previous section
+                previousSection = signalLocation
+                
+                # Set the current section as the previous section
+                previousSection = signalLocation
+                # Add 1 to the counter
+                rSectionCounter += 1
+        
+        print("This is the midway Peaks array" + str(startOfBeatArray))
+        
+        # Find data points at location given by the midwayPeaksArray in order to generate graph
+        midRSectionValues = []
+        for index in startOfBeatArray:
+            midRSectionValues.append(averagedEcgData[index])
+        
+        plt.plot(averagedEcgData, '-', startOfBeatArray, midRSectionValues, 'o')
+        plt.legend(['Averaged ECG Data - Drift Removed', 'Heart Beat Section Points'], loc='best')
+        
+        # Gives gaps inbetween subplots
+        plt.tight_layout()
+        
+        folderToSaveTo = folderLocation +'/Graphs/Part 4 - Averaged ECG Data With Drift Removed Plotted With Individual Heart Beat Cuts/'
+        Util.saveGraph(folderToSaveTo, fileName+'.png')
+        
+        return startOfBeatArray
         
     
     # Function to find zero crossings in data set
@@ -322,15 +448,16 @@ class Util:
             return math.copysign((abs(a) + abs(b)),b)
            
     # Formats and saves data to a CSV File
-    def saveToCsv(folderToSaveTo):
+    def saveToCsv(dataToSave, folderToSaveTo, fileName):
         # Try to make a folder (Stops errors)
         try:
             os.mkdir(folderToSaveTo)
             print('The Directory: ' + folderToSaveTo + ' Has Been Created. Saving Data')
         except:
             print('The Directory: ' + folderToSaveTo + ' Already Exists. Saving Data')
-            
         
+        # Allow for file to be saved
+        np.savetxt(folderToSaveTo + fileName, dataToSave, delimiter=",", fmt='%s')
         
     
     # TODO Explain how this only shows heart rate zones for a 25 year old (Will not work for other ages)

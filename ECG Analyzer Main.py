@@ -162,7 +162,7 @@ class createMainWindow(QMainWindow):
             # The running mean datapoints which are needed for cubic interpolation.
             runningMeanDatapoints = AverageEcgLeads.calculateRunningMean(averagedSignalData, 400)
             
-            # Calculate Cubic Interpolation3
+            # Calculate Cubic Interpolation
             # Uses the running average sections previously calculated to find the moving average
             cubiclyInterpolatedDatapoints = AverageEcgLeads.calculateCubicInterpolation(averagedSignalData, runningMeanDatapoints, folderLocation, fileName)
             
@@ -171,7 +171,11 @@ class createMainWindow(QMainWindow):
             
             # TODO POSSIBLY REMOVE
             # IF THIS WORKS (THEN GREAT) BUT IF IT DOESNT, TAKE THE RUNNINGMEANMAX VARIABLE AND PUT IT BACK TO 400 IN SIGNAL PROCESSING. IF THIS DOES WORK WE WILL NEED CUBIC INTERPOLATION TO FILL IN GAPS
-            averagedEcgDriftRemoved = AverageEcgLeads.calculateRunningMean(averagedEcgDriftRemoved, runningMeanMaxDatapoints = 2)
+            averagedEcgDriftRemoved = AverageEcgLeads.calculateRunningMean(averagedEcgDriftRemoved, runningMeanMaxDatapoints = 10)
+            averagedEcgDriftRemoved = AverageEcgLeads.calculateCubicInterpolationNumberTwo(averagedEcgDriftRemoved, averagedEcgDriftRemoved, folderLocation, fileName)
+            
+            # To calculate the individual frequencies in the signal and remove frequencies that arent viable
+            Fft.calculateFft(averagedEcgDriftRemoved, runningMeanDatapoints, folderLocation, fileName)
             
             # Finds the R-Peaks in the signal
             rPeaks = PeakDetection.findQrsComplex(averagedEcgDriftRemoved, folderLocation, fileName)
@@ -185,6 +189,7 @@ class createMainWindow(QMainWindow):
             # TODO Can add this again - But need to make a new folder for it possibly
             # Function to find zero crossings on the averaged signal in the data set
             # QrsDetection.findZeroCrossings(averagedSignalData, meanOfData, runningMeanDatapoints, folderLocation, fileName)
+            
             
             # Save data to CSV
             # np.savetxt(docLocation, rawDataLines, delimiter=",", fmt='%s')

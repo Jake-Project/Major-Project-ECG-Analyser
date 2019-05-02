@@ -1,205 +1,34 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu Apr 25 17:39:54 2019
-
 @author: rocke
+
+This file contains all of the classes and function for further processing the signal
+after the average of the 8 leads has been created and the baseline drift has been removed
+The final stage of this file is to attempy to find the PQRST sections
 """
 
-# To plot Graphs of data
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # To plot Graphs of data
 import os # Needed for folders
-from scipy.interpolate import interp1d
 import numpy as np
 import math
-
-
-# For peak detection
-import scipy.signal as signal
-
-# Class that finds the average of all of the ECG leads
-# The class allows for:
-#   The average of all 8 signals to be found 
-#   The moving average of the signal to be calculated
-#   The cubic interpolation of that moving average for a smooth moving average signal rather than square
-#   The signal average to have the drift removed which makes the data more uniform
-class AverageEcgLeads:
-    
-    # Function that returns the averaged signal to append to the data
-    def createAveragedSignal(charString):
-        # print('This is the char array ' + str(charString))
-        total = 0.00
-        ecgDataInstance = charString.split(",") # Split by the commas and retrieve data as an array to iterate through
-        for x in range(1, 9): # Do not include first position in array because this data is not needed
-            total += float(ecgDataInstance[x]) # Cast to float and add all of the data together
-            # print(total)
-        
-        averagedSignal = total / 9
-        # print("Averaged Signal: " + str(averagedSignal))
-        return averagedSignal
-    
-    # Function that just calculates the mean of data.
-    # Returns an array with 6000 datapoints for plotting on a graph
-    def calculateMeanOfData(averagedEcgData):
-        
-        ecgMean = 0.0
-        ecgMeanCounter = 0
-        
-        for data in averagedEcgData:
-            ecgMean += data
-            ecgMeanCounter += 1
-            
-        meanOfData = [ecgMean / ecgMeanCounter] * 6000
-        print("Mean of averagedEcgData = " + str(meanOfData[0]))
-        
-        return meanOfData
-        
-    # Method that takes a mean after n amount of signals have been iterated through
-    # This data can then be used with cubic interpolation to create a smooth curve which represents a running mean
-    # Amount of signals for mean to be calculated on (runningMeanMaxDatapoints) Should be divisible by 6000
-    def calculateRunningMean(averagedSignalData, runningMeanMaxDatapoints):
-        
-        # Array to hold the running mean datapoints
-        runningMeanDatapoints = []
-        
-        # Variables to calculate the mean
-        ecgRunningMean = 0.0
-        ecgRunningMeanCounter = 0
-        
-        # TODO THIS FUNCTION COULD FILL IN THE GAPS USING CUBIC INTERPOLATION!!!!! :D
-        
-        # Run through all of the data in the averaged signal
-        for data in averagedSignalData:
-            # Add 1 to the counter and add the averaged signal    
-            ecgRunningMean += data
-            ecgRunningMeanCounter += 1
-        
-            # If we have enough datapoints, save the data to the array and reset the counter                
-            if ecgRunningMeanCounter == runningMeanMaxDatapoints:
-                runningMeanDatapoints.append(ecgRunningMean/ecgRunningMeanCounter)
-                ecgRunningMean = 0.0
-                ecgRunningMeanCounter = 0
-      
-        return runningMeanDatapoints
-        
-    # Function to calculate the cubic spline interpolation of the running average sections of the signal
-    def calculateCubicInterpolation(averagedSignalData, runningMeanDatapoints, folderLocation, fileName):
-        print("Calculating the Cubic Interpolation of the running mean sections")
-        
-        y = []
-       
-        # For the amount of data points in our code - TODO This must be changed to the lenght of meanOfData (Here and below)
-        for x in range(1, len(runningMeanDatapoints) + 1):
-            y.append(x)
-        
-        print(len(runningMeanDatapoints))
-        print(len(y))
-        # X is horizontal (The data point included in the mean of data)
-        # Y is vertical (The mean of data that we wish to look at)
-        # This returns the interpolation function which we need to make use of
-        cubicInterpolatedRepresentation = interp1d(y, runningMeanDatapoints, 'cubic')
-        
-        xnew = np.arange(1, 15, 0.00233)
-        ynew = cubicInterpolatedRepresentation(xnew) 
-        
-        #TODO CHANGE NAME OF XNEW YNEW
-        plt.plot(averagedSignalData)
-        plt.plot(ynew)
-        #plt.plot(averagedSignalData, 'o', ynew, '--')
-        #plt.legend(['Averaged Signal Data', 'Cubic Interpolation Of Running Average Sections'], loc='best')
-        
-        folderToSaveTo = folderLocation +'/Graphs/Part 1 - (Running Mean Cubic Interpolation Paired With Averaged Signal Data)/'
-        
-        # Make sure directory exists to save file to
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
-        
-        # Function to find zero crossings for the averaged signal of the dataset using the 
-        Util.findZeroCrossings(averagedSignalData, 0, ynew, folderLocation, fileName)
-        
-        return ynew # TODO WHAT IS yNEW?????
-      
-    # TODO JAKE REMOVE THIS IF NOT NEEDED (THIS IS TO TEST IF WE CAN GET THE AVERAGED DATA CUBICLY INTERPOLATED)
-      # Function to calculate the cubic spline interpolation of the running average sections of the signal
-    def calculateCubicInterpolationNumberTwo(averagedSignalData, runningMeanDatapoints, folderLocation, fileName):
-        print("Calculating the Cubic Interpolation of the running mean sections")
-        
-        
-        y = []
-       
-        # For the amount of data points in our code - TODO This must be changed to the lenght of meanOfData (Here and below)
-        for x in range(1, len(runningMeanDatapoints) + 1):
-            y.append(x)
-        
-        # X is horizontal (The data point included in the mean of data)
-        # Y is vertical (The mean of data that we wish to look at)
-        # This returns the interpolation function which we need to make use of
-        cubicInterpolatedRepresentation = interp1d(y, runningMeanDatapoints, 'linear')
-        
-        xnew = np.arange(1, 600, 0.1)
-        ynew = cubicInterpolatedRepresentation(xnew)
-        
-        #TODO CHANGE NAME OF XNEW YNEW
-        plt.plot(averagedSignalData, 'r-')
-        plt.plot(ynew, 'b-')
-        #plt.plot(averagedSignalData, 'o', ynew, '--')
-        #plt.legend(['Averaged Signal Data', 'Cubic Interpolation Of Running Average Sections'], loc='best')
-        
-        folderToSaveTo = folderLocation +'/Graphs/Part 7 - (HAHA)/'
-        
-        # Make sure directory exists to save file to
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
-        
-        # Function to find zero crossings for the averaged signal of the dataset using the 
-        #Util.findZeroCrossings(averagedSignalData, 0, ynew, folderLocation, fileName)
-        
-        return ynew # TODO WHAT IS yNEW?????
-    
-    # Method that removes the drift from the averaged ECG signal.
-    # Function that will eliminate baseline drift of the biological ECG signal
-    def removeDrift(averagedEcgData, runningMeanDatapoints, meanOfDataBeforeDriftRemoval, folderLocation, fileName):
-        ecgSignalWithDriftRemoved = []
-        print('Length of averaged data = ' + str(len(averagedEcgData)) + '. Length of running mean datapoints' + str(len(runningMeanDatapoints)))
-        counter = 0
-        
-        # THis line is a copy - Make it yours
-        runningMeanDatapoints = runningMeanDatapoints[:len(runningMeanDatapoints)-9]
-
-        for data in runningMeanDatapoints:
-            
-            ecgSignalWithDriftRemoved.append(averagedEcgData[counter] - Util.distance(0, data))
-            counter += 1
-        
-        meanOfDataNow = AverageEcgLeads.calculateMeanOfData(ecgSignalWithDriftRemoved)
-        
-        plt.plot(ecgSignalWithDriftRemoved, '-', meanOfDataBeforeDriftRemoval, '-', meanOfDataNow, '-', averagedEcgData, '-')
-        plt.legend(['Averaged ECG Data - Drift Removed', 'Mean Of Data Before Drift Removal', 'Mean Of Data Now', 'Averaged ECG Data - No Processing'], loc='best')
-        
-        # Gives gaps inbetween subplots
-        plt.tight_layout()
-        
-        folderToSaveTo = folderLocation +'/Graphs/Part 2 - (Averaged ECG Data (Drift Removed Vs No Processing)/'
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
-        
-        return ecgSignalWithDriftRemoved
-    
-    #__init__.py
-    
-    
+import scipy.signal as signal # For peak detection
 
 
 class PeakDetection:
     
     # TODO - Try and use signalPeaks inside of this to try to calculate if the r peaks stayed the same...
-    # To try and find P, T Peaks (Will also refind r peaks)
+    # To try and find P, T Peaks (Will also re-find r peaks)
     # Looks for peaks based on individual beats and saves this to an array to show as whole ECG again
-    # Will not work on individuals with unusual rhythms as the p and t will be off
-    def findPeaks(averagedEcgData, startEndOfBeats, folderLocation, fileName):
+    # Will not find individuals P and T sections if they have certain heart disorders. 
+    def findPeaks(averaged_ecg_data, start_end_of_beats, folder_location, file_name):
         
-        pSegmentIndexs = []
-        pSegmentPeaks = [] 
+        p_segment_indexs = []
+        p_segment_peaks = [] 
         rSegmentIndexs = []
-        rSegmentPeaks = []
+        r_segment_peaks = []
         tSegmentIndexs = []
-        tSegmentPeaks = []
+        t_segment_peaks = []
         
         # To hold the last place indexed
         lastIndex = 0
@@ -208,14 +37,14 @@ class PeakDetection:
         counter = 0
         
         # Get the mean to find the height we are looking for the peaks at
-        meanOfData = AverageEcgLeads.calculateMeanOfData(averagedEcgData)
+        meanOfData = Util.calculateMeanOfData(averaged_ecg_data)
         
         # Slice Array with point A and B (Start and end of the beat) and try to find 3 peaks
-        for index in startEndOfBeats:
+        for index in start_end_of_beats:
             # If index == 0, skip
             if index != 0:
                 # TODO - need to write distance function to calculate the distance because this will  change! # Distance was at 100 IMPORTANT DISTANCE MAY BE IMPORTANT)
-                signalPeaks = signal.find_peaks(averagedEcgData[lastIndex:index], height=meanOfData[0], width=3, distance = 30)
+                signalPeaks = signal.find_peaks(averaged_ecg_data[lastIndex:index], height=meanOfData[0], width=3, distance = 30)
                 
                 # Counter to keep track of signalPeaks[0] compared to signalPeaks[1]['peak_heights']
                 signalPeaksCounter = 0
@@ -245,7 +74,7 @@ class PeakDetection:
                         rSegment = sectionPeaks
                         rSegmentIndex = signalPeaks[0][signalPeaksCounter]
                         # Add r segment to array for whole ecg
-                        rSegmentPeaks.append(rSegment)
+                        r_segment_peaks.append(rSegment)
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
                         rSegmentIndexs.append(lastIndex + rSegmentIndex)
                         
@@ -259,7 +88,7 @@ class PeakDetection:
                         # TODO - remove this from here. It will take years otherwise
                         # Set it up to be less than the mean of data to start with (thats the beggining threshold anyway)
                         sSegmentToTest = meanOfData[0]
-                        dataToSearchIn = averagedEcgData[lastIndex:index]
+                        dataToSearchIn = averaged_ecg_data[lastIndex:index]
                         breakCounter = 0
                         # TODO BAD WAY TO DO THIS. FIND START OF r PROPERLY! DONT BE A MORON.
                         todo = int(len(dataToSearchIn) / 2)
@@ -280,21 +109,21 @@ class PeakDetection:
                                     sSegment = sSegmentToTest
                                     sSegmentIndex = todo + sSegmentSearchCounter
                                     breakCounter = 1
-                                    print('sSegmentSearch (' + str(sSegmentSearch) + ') - sSegmentToTest (' + str(sSegmentToTest) + ') = ' + str((sSegmentSearch) - (sSegmentToTest)))
+                                    #print('sSegmentSearch (' + str(sSegmentSearch) + ') - sSegmentToTest (' + str(sSegmentToTest) + ') = ' + str((sSegmentSearch) - (sSegmentToTest)))
                                     plt.plot(dataToSearchIn, '-', todo + sSegmentSearchCounter, sSegmentToTest, 'ro')
                                     plt.legend(['ECG Signal', 'P Peak'], loc='best')
                                     plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(meanOfData[0]))
                                     plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                                    folderToSaveTo = folderLocation +'/Graphs/Hopefully the S Segment/'
+                                    folderToSaveTo = folder_location +'/Graphs/Hopefully the S Segment/'
                                     # Make sure directory exists to save file to
-                                    Util.saveGraph(folderToSaveTo, fileName + " BEAT " + str(counter + 1) + '.png') 
+                                    Util.saveGraph(folderToSaveTo, file_name + " BEAT " + str(counter + 1)) 
                  
                             # Counter needs incrementing anyway
                             else:
                                 sSegmentSearchCounter += 1
                         
                         qSegmentToTest = meanOfData[0]
-                        arrayReadyForReverse = averagedEcgData[lastIndex:index]
+                        arrayReadyForReverse = averaged_ecg_data[lastIndex:index]
                         dataToSearchIn = arrayReadyForReverse[::-1]
                         breakCounter = 0
                         # TODO BAD WAY TO DO THIS. FIND START OF r PROPERLY! DONT BE A MORON.
@@ -315,14 +144,14 @@ class PeakDetection:
                                     qSegment = qSegmentToTest
                                     qSegmentIndex = len(dataToSearchIn) - (todo + qSegmentSearchCounter)
                                     breakCounter = 1
-                                    print('qSegmentSearch (' + str(qSegmentSearch) + ') - qSegmentToTest (' + str(qSegmentToTest) + ') = ' + str((qSegmentSearch) - (qSegmentToTest)))
+                                    #print('qSegmentSearch (' + str(qSegmentSearch) + ') - qSegmentToTest (' + str(qSegmentToTest) + ') = ' + str((qSegmentSearch) - (qSegmentToTest)))
                                     plt.plot(dataToSearchIn, '-', todo + qSegmentSearchCounter, qSegmentToTest, 'ro')
                                     plt.legend(['ECG Signal', 'P Peak'], loc='best')
                                     plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(meanOfData[0]))
                                     plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                                    folderToSaveTo = folderLocation +'/Graphs/Hopefully the Q Segment/'
+                                    folderToSaveTo = folder_location +'/Graphs/Hopefully the Q Segment/'
                                     # Make sure directory exists to save file to
-                                    Util.saveGraph(folderToSaveTo, fileName + " BEAT " + str(counter + 1) + '.png') 
+                                    Util.saveGraph(folderToSaveTo, file_name + " BEAT " + str(counter + 1)) 
                  
                             # Counter needs incrementing anyway
                             else:
@@ -335,7 +164,7 @@ class PeakDetection:
                         tSegment = sectionPeaks
                         tSegmentIndex = signalPeaks[0][signalPeaksCounter]
                         # Add t segment to array for whole ecg
-                        tSegmentPeaks.append(tSegment)
+                        t_segment_peaks.append(tSegment)
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
                         tSegmentIndexs.append(lastIndex +tSegmentIndex)
                     # p peak has to come before r segment.
@@ -345,9 +174,9 @@ class PeakDetection:
                         pSegment = sectionPeaks
                         pSegmentIndex = signalPeaks[0][signalPeaksCounter]
                         # Add p segment to array for whole ecg
-                        pSegmentPeaks.append(pSegment)
+                        p_segment_peaks.append(pSegment)
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
-                        pSegmentIndexs.append(lastIndex + pSegmentIndex)
+                        p_segment_indexs.append(lastIndex + pSegmentIndex)
                         
                     signalPeaksCounter += 1
                 #prsSectionPeaks.extend(signalPeaks[1]['peak_heights'])
@@ -356,40 +185,41 @@ class PeakDetection:
                 x = []
                 y = []
                 c = 0
-                for d in averagedEcgData:
+                for d in averaged_ecg_data:
                     x.append(c)
                     c+=1
                 # TODO For testing purposes only
-                plt.plot(averagedEcgData[lastIndex:index], '-', x[qSegmentIndex:sSegmentIndex], averagedEcgData[qSegmentIndex:sSegmentIndex], 'y-', pSegmentIndex, pSegment, 'ro', qSegmentIndex, qSegment, 'co', rSegmentIndex, rSegment, 'bo', sSegmentIndex, sSegment, 'mo', tSegmentIndex, tSegment, 'go')
+                plt.plot(averaged_ecg_data[lastIndex:index], '-', x[qSegmentIndex:sSegmentIndex], averaged_ecg_data[qSegmentIndex:sSegmentIndex], 'y-', pSegmentIndex, pSegment, 'ro', qSegmentIndex, qSegment, 'co', rSegmentIndex, rSegment, 'bo', sSegmentIndex, sSegment, 'mo', tSegmentIndex, tSegment, 'go')
                 plt.legend(['ECG Signal', 'QRS Segment', 'P Peak', 'Q Valley', 'R Peak', 'S Valley', 'T Peak'], loc='best')
                 plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(meanOfData[0]))
                 plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                folderToSaveTo = folderLocation +'/Graphs/Part 5 - Individual Heart Beats Plotted Against PRT-Peaks/'
+                folderToSaveTo = folder_location +'/Graphs/Part 5 - Individual Heart Beats Plotted Against PRT-Peaks/'
                 # Make sure directory exists to save file to
-                Util.saveGraph(folderToSaveTo, fileName + " BEAT " + str(counter + 1) + '.png') 
+                Util.saveGraph(folderToSaveTo, file_name + " BEAT " + str(counter + 1)) 
                 counter += 1
                 
                 # Change the last index to be the current index
                 lastIndex = index
         
-        # Adding the averagedEcgData to the graph
-        plt.plot(averagedEcgData, '-', pSegmentIndexs, pSegmentPeaks, 'ro', rSegmentIndexs, rSegmentPeaks, 'bo', tSegmentIndexs, tSegmentPeaks, 'go')
+        # Adding the averaged_ecg_data to the graph
+        plt.plot(averaged_ecg_data, '-', p_segment_indexs, p_segment_peaks, 'ro', rSegmentIndexs, r_segment_peaks, 'bo', tSegmentIndexs, t_segment_peaks, 'go')
         plt.legend(['ECG Signal', 'P Peak', 'R Peak', 'T Peak'], loc='best')
         plt.title('PRT-Peaks Plotted Against ECG Data', fontsize = 20)
         
-        folderToSaveTo = folderLocation +'/Graphs/Part 6 - PRT-Peaks Plotted Against Averaged ECG Signal With Biological Drift Removed/'
+        folderToSaveTo = folder_location +'/Graphs/Part 6 - PRT-Peaks Plotted Against Averaged ECG Signal With Biological Drift Removed/'
         
         # Make sure directory exists to save file to
-        Util.saveGraph(folderToSaveTo, fileName+'.png') 
+        Util.saveGraph(folderToSaveTo, file_name) 
+    
     
     # TODO - LOOK AT THE HEARTBEAT SECTION FINDING PART. THERE IS A PICTURE SAVED IN GRAPHS. IMPORTANT
     # THIS METHOD BREAKS DOWN AND CEASES TO WORK IF THE HEARTRATE SPEEDS UP OR DOWN TOO MUCH
     # Function to detect peaks in the data.
     # Heart Rate is then calculated from these peaks and is saved into an Excel file
-    def findQrsComplex(averagedEcgData, folderLocation, fileName):
+    def findQrsComplex(averaged_ecg_data, folder_location, file_name):
         # Returns 2 arrays. One containing the location of the peaks in the array
-        # The other containing the value of the peak
-        signalPeaks = signal.find_peaks(averagedEcgData, height=200, distance=200)
+        # The other containing the value of the peak # TODO - Shouldnt this height be higher? Probably more like 400? # SHOULD DISTANCE BE 30? (200bpm over 6000 samples = 30) - REFERENCED AS 30 in report
+        signalPeaks = signal.find_peaks(averaged_ecg_data, height=200, distance=200)
         print(signalPeaks[0])
         print(signalPeaks[1]['peak_heights'])
         
@@ -404,6 +234,8 @@ class PeakDetection:
         # Adding the heartrate to the array
         heartRateDataToSave[1][0] = str(heartRate)
         
+        #TODO change Mv on graphs to mV
+        
         # Calculates the Heart Rate zone of the participant (Uses 25 year old for calculation)
         heartRateZone = Util.calculateHeartRateZone(heartRate)
         # Adding Heart Rate Zone to array
@@ -411,32 +243,34 @@ class PeakDetection:
         print("Participants Heart Rate Is Equal To " + str(heartRate) + " And Their Heart Rate Zone Is " + heartRateZone)
         
         # Save heart rate data to file for user
-        Util.saveToCsv(heartRateDataToSave, folderLocation +'/Results/', fileName + ' Results.csv')
+        Util.saveToCsv(heartRateDataToSave, folder_location +'/Results/', file_name + ' Results.csv')
         
-        # Adding the averagedEcgData to the graph
-        plt.plot(averagedEcgData, '-', signalPeaks[0], signalPeaks[1]['peak_heights'], 'o')
+        # Adding the averaged_ecg_data to the graph
+        plt.plot(averaged_ecg_data, '-', signalPeaks[0], signalPeaks[1]['peak_heights'], 'o')
         plt.legend(['ECG Signal', 'R-Peaks'], loc='best')
         plt.title('R-Peaks Plotted Against ECG Data', fontsize = 20)
         plt.text(0.5, 0.5, 'Heart Rate = ' + str(heartRate))
         
-        folderToSaveTo = folderLocation +'/Graphs/Part 3 - (R-Peaks Plotted Against Averaged ECG Data With Biological Drift Removed)/'
+        folderToSaveTo = folder_location +'/Graphs/Part 3 - (R-Peaks Plotted Against Averaged ECG Data With Biological Drift Removed)/'
         
         # Make sure directory exists to save file to
-        Util.saveGraph(folderToSaveTo, fileName+'.png') 
+        Util.saveGraph(folderToSaveTo, file_name) 
         
         return signalPeaks
+    
+    
     
 class Fft:
     
     # TODO - Do i need running mean datapoints here?
     # Calculate the FFT using the averaged ECG Data
-    def calculateFft(averagedEcgData, runningMeanDatapoints, folderLocation, fileName):
+    def calculateFft(averaged_ecg_data, runningMeanDatapoints, folder_location, file_name):
         
         # Calculates discrete fourier transform using FFT (fast fourier transform)
-        averageEcgFft = np.fft.fft(averagedEcgData)
+        averageEcgFft = np.fft.fft(averaged_ecg_data)
         
         # This gets the Discrete fourier transforms frequencies
-        freq = np.fft.fftfreq(len(averagedEcgData))
+        freq = np.fft.fftfreq(len(averaged_ecg_data))
         
         print('freq = ' + str(freq))
         print(len(freq))
@@ -450,23 +284,24 @@ class Fft:
         filtered_sig = np.fft.ifft(averageEcgFft)
         print("FFT WITH MATH = " + str(averageEcgFft))
         
-        folderToSaveTo = folderLocation +'/Graphs/Part 8 - Averaged ECG Data (Drift Removed) As FFT FREQ/'
+        folderToSaveTo = folder_location +'/Graphs/Part 8 - Averaged ECG Data (Drift Removed) As FFT FREQ/'
         plt.plot(averageEcgFft)
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
+        Util.saveGraph(folderToSaveTo, file_name)
         
-        folderToSaveTo = folderLocation +'/Graphs/Part 9 - Averaged ECG Data (Drift Removed) As FFT FREQ/'
+        folderToSaveTo = folder_location +'/Graphs/Part 9 - Averaged ECG Data (Drift Removed) As FFT FREQ/'
         plt.plot(filtered_sig)
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
+        Util.saveGraph(folderToSaveTo, file_name)
         
         #plots the freq against the length
         #plt.plot(freq, np.abs(averageEcgFft))
-        #self.saveGraph(folderToSaveTo, fileName+'.png')        
+        #self.saveGraph(folderToSaveTo, file_name)        
+        
         
         
 class Util:
     
     # Function to make a directory in python to save the graphs to     
-    def saveGraph(folderToSaveTo, fileName):
+    def saveGraph(folderToSaveTo, file_name):
         try:
             os.mkdir(folderToSaveTo)
             print('The Directory: ' + folderToSaveTo + ' Has Been Created. Saving Data')
@@ -480,14 +315,12 @@ class Util:
         plt.show()
         
         # Save and clear the plot
-        plt.savefig(folderToSaveTo + fileName)
+        plt.savefig(folderToSaveTo + file_name + '.png')
         plt.cla() # Clear the plot
     
     
-    # TODO THIS IS FLAWED SOMEHOW. LOOK AT IMPORTANT PHOTO WHICH HAS BEEN SAVED (MARKED IMPORTANT)
-    # THIS HAPPENED WHEN USING RUNNING AVERAGE ON ECG SIGNAL AND THEN RUNNING THAT THROUGH THIS METHOD
     # Method to find the individual beats 
-    def findIndividualBeats(averagedEcgData, signalPeaks, folderLocation, fileName):
+    def findIndividualBeats(averaged_ecg_data, signalPeaks, folder_location, file_name):
         
         # Array to hold the datapoints index's inbetween the peaks - Meaning the end of one beat and the start of the next
         startOfBeatArray = []
@@ -517,7 +350,7 @@ class Util:
                 
                 # if this is the last peak we can add 6000 to array because there are no obvious mid points past this location
                 if rSectionCounter == len(signalPeaks[0]) - 1:
-                    startOfBeatArray.append(len(averagedEcgData) - 1)
+                    startOfBeatArray.append(len(averaged_ecg_data) - 1)
                 
                 # Set the current section as the previous section
                 previousSection = signalLocation
@@ -532,22 +365,22 @@ class Util:
         # Find data points at location given by the midwayPeaksArray in order to generate graph
         midRSectionValues = []
         for index in startOfBeatArray:
-            midRSectionValues.append(averagedEcgData[index])
+            midRSectionValues.append(averaged_ecg_data[index])
         
-        plt.plot(averagedEcgData, '-', startOfBeatArray, midRSectionValues, 'o')
+        plt.plot(averaged_ecg_data, '-', startOfBeatArray, midRSectionValues, 'o')
         plt.legend(['Averaged ECG Data - Drift Removed', 'Heart Beat Section Points'], loc='best')
         
         # Gives gaps inbetween subplots
         plt.tight_layout()
         
-        folderToSaveTo = folderLocation +'/Graphs/Part 4 - Averaged ECG Data With Drift Removed Plotted With Individual Heart Beat Cuts/'
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
+        folderToSaveTo = folder_location +'/Graphs/Part 4 - Averaged ECG Data With Drift Removed Plotted With Individual Heart Beat Cuts/'
+        Util.saveGraph(folderToSaveTo, file_name)
         
         return startOfBeatArray
         
     
     # Function to find zero crossings in data set
-    def findZeroCrossings(averagedEcgData, meanOfData, runningMeanDatapoints, folderLocation, fileName):
+    def findZeroCrossings(averaged_ecg_data, meanOfData, runningMeanDatapoints, folder_location, file_name):
         print("Finding Zero Crossings")
         
         lastDataPoint = meanOfData
@@ -559,7 +392,7 @@ class Util:
         zeroCrossingCounter = 0
         zeroCrossingPlotArray = []
         
-        for dataPoint in averagedEcgData:
+        for dataPoint in averaged_ecg_data:
             
             # TODO maybe remove this
             zeroCrossingCounter += 1
@@ -589,7 +422,7 @@ class Util:
         
         print('Data Over = ' + str(dataOver) + ' And Data Under = ' + str(dataUnder))
         
-        # plt.plot(averagedEcgData) # Plot ecg data
+        # plt.plot(averaged_ecg_data) # Plot ecg data
         
         # Is this needed?
         y = []
@@ -602,32 +435,44 @@ class Util:
         plt.plot(runningMeanDatapoints)
         
         # To add the mean of the data to the graph
-        plt.plot(np.repeat(meanOfData, len(averagedEcgData)))
+        plt.plot(np.repeat(meanOfData, len(averaged_ecg_data)))
         
-        folderToSaveTo = folderLocation +'/Graphs/ECG Data plotted against Moving Point Average/'
+        folderToSaveTo = folder_location +'/Graphs/ECG Data plotted against Moving Point Average/'
         
         # Make sure directory exists to save file to
-        Util.saveGraph(folderToSaveTo, fileName+'.png')
+        Util.saveGraph(folderToSaveTo, file_name)
         
         #Probably remove from here and put elsewhere......
-        #Fft.calculateFft(averagedEcgData, runningMeanDatapoints, folderLocation, fileName)
+        #Fft.calculateFft(averaged_ecg_data, runningMeanDatapoints, folder_location, file_name)
         #for csvData in ecgData:
          #   print("Data = " + str(ecgData))
         
-     # TODO this is totally someone elses function. If it needs keeping then it needs to be deleted and rewritten
-    def distance(a, b):
-        if (a == b):
+        
+    # Function to find the distance between two numbers
+    def findDistance(pointOne, pointTwo):
+        # If the two points are exactly the same, return 0
+        if (pointOne == pointTwo):
             return 0
-        elif (a < 0) and (b < 0) or (a > 0) and (b > 0):
-            if (a < b):
-                return (abs(abs(a) - abs(b)))
+        
+        # If both pointOne and pointTwo are above or below 0
+        elif ((pointOne > 0) and (pointTwo > 0)) or ((pointOne < 0) and (pointTwo < 0)):
+            # absolute turns negative number into positive numbers
+            # If point one is greater than point two, Find the absolute value of pointOne - pointTwo 
+            # and return it as a negative
+            if (pointOne > pointTwo):
+                return -(abs(abs(pointOne) - abs(pointTwo)))
+            # If pointTwo is greater than pointOne, do the same but return as a positive
             else:
-                return -(abs(abs(a) - abs(b)))
+                return (abs(abs(pointOne) - abs(pointTwo)))
+        
+        # If one point is above zero but the other point is below zero
         else:
-            return math.copysign((abs(a) + abs(b)),b)
-           
+            # Return the two points added together with the signature of point 2
+            return math.copysign((abs(pointOne) + abs(pointTwo)),pointTwo)
+        
+        
     # Formats and saves data to a CSV File
-    def saveToCsv(dataToSave, folderToSaveTo, fileName):
+    def saveToCsv(dataToSave, folderToSaveTo, file_name):
         # Try to make a folder (Stops errors)
         try:
             os.mkdir(folderToSaveTo)
@@ -636,8 +481,23 @@ class Util:
             print('The Directory: ' + folderToSaveTo + ' Already Exists. Saving Data')
         
         # Allow for file to be saved
-        np.savetxt(folderToSaveTo + fileName, dataToSave, delimiter=",", fmt='%s')
+        np.savetxt(folderToSaveTo + file_name, dataToSave, delimiter=",", fmt='%s')
         
+    # Function that just calculates the mean of data.
+    # Returns an array with 6000 datapoints of the mean of data for plotting on a graph
+    def calculateMeanOfData(averaged_ecg_data):
+        
+        ecgMean = 0.0
+        ecgMeanCounter = 0
+        
+        for data in averaged_ecg_data:
+            ecgMean += data
+            ecgMeanCounter += 1
+            
+        meanOfData = [ecgMean / ecgMeanCounter] * 6000
+        print("Mean of averaged_ecg_data = " + str(meanOfData[0]))
+        
+        return meanOfData
     
     # TODO Explain how this only shows heart rate zones for a 25 year old (Will not work for other ages)
     # Even then its a guestimate. 

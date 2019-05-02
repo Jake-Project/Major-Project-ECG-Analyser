@@ -6,10 +6,15 @@ This project is written using Python 3.7 and Spyder.
 As the final Capstone for my Bachelors at Aberystwyth University I am researching Electrocardiograms and studying heart rates.
 
 ## Data Aquisition
-Talk about Welch Allyn - 600hz
+Data was recorded on the Welch Allyn CardioPerfect Electrocardiograph at 600hz
+The data was then exported as a .scp file and imported into the ECG Toolkit 2.4 software.
+The data was finally exported as a CSV file that this program can read.
 
-## Programs and Code
-There are 2 programs that I created during this project. The first program allows CSV data to be sanitised in order to be used for heart rate analysis.
+## Code
+In total, there are 3 files:
+	ECG Analyzer Main
+	Signal Processing
+	Average Leads
 
 ### CSV Formatter for ECG Toolkit 2.4
 To gather the ECG data I have been using Welch Allyn hardware and software. Unfortunately the Welch Allyn software cannot export a data type that can be utilized.
@@ -22,8 +27,7 @@ The file that the ECG Toolkit 2.4 exports only has one collumn and the data is f
 3. Application automatically scans the file and saves over the original file with the newly sanitised data
 
 #### Needs Implementing:
-1. User can choose which columns they wish to keep
-2. User has the option of merging all of the signals into a single signal
+TODO
 
 #### After the data has been exported:
 1. open the CSV Formatter for ECG Toolkit 2.4 Python program.
@@ -38,8 +42,9 @@ This program allows the user to load in sanitised ECG data to view information a
 #### Currently Implemented:
 1. Shows Heart Rate in console
 2. Shows ECG Signal data in application window
-3. User can quit the application using the X, File -> Quit, CNTL + W
-4. User can open files using File -> Open, CTRL + O
+3.
+4. User can quit the application using the X, File -> Quit, CNTL + W
+5. User can open files using File -> Open, CTRL + O
 
 #### Needs Implementing:
 1. Code broken down into multiple classes

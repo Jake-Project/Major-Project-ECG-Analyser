@@ -25,9 +25,9 @@ class PeakDetection:
         
         p_segment_indexs = []
         p_segment_peaks = [] 
-        rSegmentIndexs = []
+        r_segment_indexs = []
         r_segment_peaks = []
-        tSegmentIndexs = []
+        t_segment_indexs = []
         t_segment_peaks = []
         
         # To hold the last place indexed
@@ -76,7 +76,7 @@ class PeakDetection:
                         # Add r segment to array for whole ecg
                         r_segment_peaks.append(rSegment)
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
-                        rSegmentIndexs.append(lastIndex + rSegmentIndex)
+                        r_segment_indexs.append(lastIndex + rSegmentIndex)
                         
                          # Experimental 2:40 am 27/04 TODO
                         # Use r as a basis to find q and s
@@ -166,7 +166,7 @@ class PeakDetection:
                         # Add t segment to array for whole ecg
                         t_segment_peaks.append(tSegment)
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
-                        tSegmentIndexs.append(lastIndex +tSegmentIndex)
+                        t_segment_indexs.append(lastIndex +tSegmentIndex)
                     # p peak has to come before r segment.
                     elif sectionPeaks < 400 and rSegment == 0:
                         print("Appending p Peak")
@@ -202,7 +202,7 @@ class PeakDetection:
                 lastIndex = index
         
         # Adding the averaged_ecg_data to the graph
-        plt.plot(averaged_ecg_data, '-', p_segment_indexs, p_segment_peaks, 'ro', rSegmentIndexs, r_segment_peaks, 'bo', tSegmentIndexs, t_segment_peaks, 'go')
+        plt.plot(averaged_ecg_data, '-', p_segment_indexs, p_segment_peaks, 'ro', r_segment_indexs, r_segment_peaks, 'bo', t_segment_indexs, t_segment_peaks, 'go')
         plt.legend(['ECG Signal', 'P Peak', 'R Peak', 'T Peak'], loc='best')
         plt.title('PRT-Peaks Plotted Against ECG Data', fontsize = 20)
         

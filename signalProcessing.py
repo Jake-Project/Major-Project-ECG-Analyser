@@ -17,23 +17,27 @@ import scipy.signal as signal # For peak detection
 
 class PeakValleyDetection:
     
-    # TODO - Try and use signal_peaks inside of this to try to calculate if the r peaks stayed the same...
     # To try and find P, T Peaks (Will also re-find r peaks)
-    # Looks for peaks based on individual beats and saves this to an array to show as whole ECG again
-    # Will not find individuals P and T sections if they have certain heart disorders. 
+    # Looks for peaks based on individual beats that have been taken as a slice out of the signal array 
+    # and saves this to the array to show as whole ECG again
+    # Looks for Q and S valleys based off of the R Peak 
     def findPeaks(averaged_ecg_data, start_end_of_beats, folder_location, file_name):
         
         p_segment_indexs = []
         p_segment_peaks = [] 
+        q_segment_indexs = []
+        q_segment_peaks = []
         r_segment_indexs = []
         r_segment_peaks = []
+        s_segment_indexs = []
+        s_segment_peaks = []
         t_segment_indexs = []
         t_segment_peaks = []
         
         # To hold the last place indexed
         last_index = 0
         
-        # FOR naming graphs
+        # For naming graphs
         counter = 0
         
         # Get the mean to find the height we are looking for the peaks at
@@ -43,17 +47,16 @@ class PeakValleyDetection:
         for index in start_end_of_beats:
             # If index == 0, skip
             if index != 0:
-                # Finding peaks which have a width of 3 and are at a distance of 30 datapoints away from each other
-                signal_peaks = signal.find_peaks(averaged_ecg_data[last_index:index], height=mean_of_data[0], width=3, distance = 30)
+                # Finding peaks which have a width of 3 and are at a distance of 30 datapoints away 
+                # from each other
+                signal_peaks = signal.find_peaks(averaged_ecg_data[last_index:index], height=mean_of_data[0], 
+                                                 width=3, distance = 30)
                 
                 # Counter to keep track of signal_peaks[0] compared to signal_peaks[1]['peak_heights']
                 signal_peaks_counter = 0
                 
-                # Because we sliced the array, the index's are incorrect. We need to add the original index to the numbers first
-                # We will append to the array at the same time
-               # for slicedIndex in signal_peaks[0]:
-                   # prtSectionIndexs.append(last_index + slicedIndex)
-                
+                # Because we sliced the array, the index's are incorrect. We need to add the original index 
+                # to the numbers first. We will append to the array at the same time
                 p_segment = 0
                 p_segment_index = 0
                 q_segment = 0
@@ -67,7 +70,8 @@ class PeakValleyDetection:
                     
                 # Apply a filter to sort the peaks (Based on height)
                 for section_peaks in signal_peaks[1]['peak_heights']:
-                    # r peaks are always above 400. Peaks are returned in order. Cannot be after t_segment. Cannot have duplicates as heart beat should have this in the middle
+                    # r peaks are always above 400. Peaks are returned in order. Cannot be after t_segment. 
+                    # Cannot have duplicates as heart beat should have this in the middle
                     if section_peaks >= 400 and t_segment == 0 and r_segment == 0: 
                         print("Appending r Peak")
                         # Set r segment height and position
@@ -78,98 +82,52 @@ class PeakValleyDetection:
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
                         r_segment_indexs.append(last_index + r_segment_index)
                         
-                        # TODO New as of 04:21 - 02/05/29
-                        
-                        # Index of the current r Peak
+                        # Index of the current r Peak - We know this because its just been saved as this
                         r_peak_index = signal_peaks[0][signal_peaks_counter]
-                        print("R PEAK INDEX ! " + r_peak_index)
+                    
                         ecg_data_heartbeat_slice = averaged_ecg_data[last_index:index]
                         
-                        s_segment_parts = PeakValleyDetection.findValleys(mean_of_data, r_peak_index, ecg_data_heartbeat_slice, signal_peaks, signal_peaks_counter, folder_location, file_name + " BEAT " + str(counter + 1))
-                        s_segment = s_segment_parts[0]
-                        s_segment_index = s_segment_parts[1]
-                        # TODO VERY IMPORTANT! REMEMBER THAT THE Q SECTION IS FLIPPED AND MUST BE FLIPPED BACK ;)
+                        # Call a valley finding algorithm to find the s segment
+                        s_segment_parts = PeakValleyDetection.findValleys(mean_of_data, r_peak_index, 
+                                                                          ecg_data_heartbeat_slice, 
+                                                                          signal_peaks, signal_peaks_counter, 
+                                                                          folder_location + '/Graphs/Part 8 - Singular Heart Beats With S Valleys/', 
+                                                                          file_name + " BEAT " + str(counter + 1))
+                        # May return None if nothing is found
+                        # Save data to array for graph
+                        if s_segment_parts != None:
+                            s_segment = s_segment_parts[0]
+                            s_segment_peaks.append(s_segment)
+                            s_segment_index = s_segment_parts[1]
+                            # Need to append the overall counter as this is just a slice of the signal
+                            s_segment_indexs.append(s_segment_index + last_index)
                         
+                        # Call a valley finding algorithm to find the q segment
+                        # This data is flipped around so that the same function can be used 
+                        # as the q section is before the r section
+                        ecg_data_heartbeat_slice = averaged_ecg_data[last_index:index]
+                        ecg_data_heartbeat_slice_reversed = ecg_data_heartbeat_slice[::-1]
+                        q_segment_parts = PeakValleyDetection.findValleys(mean_of_data, r_peak_index, 
+                                                                          ecg_data_heartbeat_slice_reversed, 
+                                                                          signal_peaks, signal_peaks_counter, 
+                                                                          folder_location + '/Graphs/Part 9 - Singular Heart Beats With Q Valleys/', 
+                                                                          file_name + " BEAT " + str(counter + 1))
                         
-                        # Experimental 2:40 am 27/04 TODO
-                        # Use r as a basis to find q and s
-                        # r is always found :)
-                        # My own valley finding algorithm (From r peaks)
-                        
-                        # TODO - turn this into a find valley function and call it - SImples
-                        # Set it up to be less than the mean of data to start with (thats the beggining threshold anyway)
-                        s_segment_to_test = mean_of_data[0]
-                        data_to_search_in = averaged_ecg_data[last_index:index]
-                        break_counter = 0
-                        # TODO BAD WAY TO DO THIS. FIND START OF r PROPERLY! DONT BE A MORON.
-                        todo = int(len(data_to_search_in) / 2)
-                        todo = signal_peaks[0][signal_peaks_counter]
-                        
-                        s_segment_search_counter = 0
-                        # Find index of r peak to start search
-                        for s_segment_search in data_to_search_in[todo : ]:
-                            # S Segment will always be below mean_of_data
-                            if s_segment_search < mean_of_data[0]:
-                                # Get positive number (if negative then it will be double negative so will turn positive)
-                                if (s_segment_search) - (s_segment_to_test) < 0:
-                                    s_segment_to_test = s_segment_search
-                                    s_segment_search_counter += 1
-                                elif break_counter != 1:
-                                    # I think we found the S Segment
-                                    # TODO For testing purposes only
-                                    s_segment = s_segment_to_test
-                                    s_segment_index = todo + s_segment_search_counter
-                                    break_counter = 1
-                                    #print('s_segment_search (' + str(s_segment_search) + ') - s_segment_to_test (' + str(s_segment_to_test) + ') = ' + str((s_segment_search) - (s_segment_to_test)))
-                                    plt.plot(data_to_search_in, '-', todo + s_segment_search_counter, s_segment_to_test, 'ro')
-                                    plt.legend(['ECG Signal', 'P Peak'], loc='best')
-                                    plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(mean_of_data[0]))
-                                    plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                                    folder_to_save_to = folder_location +'/Graphs/Hopefully the S Segment/'
-                                    # Make sure directory exists to save file to
-                                    Util.saveGraph(folder_to_save_to, file_name + " BEAT " + str(counter + 1)) 
-                 
-                            # Counter needs incrementing anyway
-                            else:
-                                s_segment_search_counter += 1
-                        
-                        q_segment_to_test = mean_of_data[0]
-                        array_ready_for_reverse = averaged_ecg_data[last_index:index]
-                        data_to_search_in = array_ready_for_reverse[::-1]
-                        break_counter = 0
-                        # TODO BAD WAY TO DO THIS. FIND START OF r PROPERLY! DONT BE A MORON.
-                        todo = signal_peaks[0][signal_peaks_counter]
-                        
-                        q_segment_search_counter = 0
-                        # Find index of r peak to start search
-                        for q_segment_search in data_to_search_in[todo : ]:
-                            # S Segment will always be below mean_of_data
-                            if q_segment_search < mean_of_data[0]:
-                                # Get positive number (if negative then it will be double negative so will turn positive)
-                                if (q_segment_search) - (q_segment_to_test) < 0:
-                                    q_segment_to_test = q_segment_search
-                                    q_segment_search_counter += 1
-                                elif break_counter != 1:
-                                    # I think we found the S Segment
-                                    # TODO For testing purposes only
-                                    q_segment = q_segment_to_test
-                                    q_segment_index = len(data_to_search_in) - (todo + q_segment_search_counter)
-                                    break_counter = 1
-                                    #print('q_segment_search (' + str(q_segment_search) + ') - q_segment_to_test (' + str(q_segment_to_test) + ') = ' + str((q_segment_search) - (q_segment_to_test)))
-                                    plt.plot(data_to_search_in, '-', todo + q_segment_search_counter, q_segment_to_test, 'ro')
-                                    plt.legend(['ECG Signal', 'P Peak'], loc='best')
-                                    plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(mean_of_data[0]))
-                                    plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                                    folder_to_save_to = folder_location +'/Graphs/Hopefully the Q Segment/'
-                                    # Make sure directory exists to save file to
-                                    Util.saveGraph(folder_to_save_to, file_name + " BEAT " + str(counter + 1)) 
-                 
-                            # Counter needs incrementing anyway
-                            else:
-                                q_segment_search_counter += 1
-                                
+                        # May return None if nothing is found
+                        if q_segment_parts != None:
+                            # Because the array was reversed, the index needs to be inverted
+                            # Save to array for graph
+                            q_segment = q_segment_parts[0]
+                            q_segment_peaks.append(q_segment)
+                            q_segment_index = len(ecg_data_heartbeat_slice) - q_segment_parts[1]
+                            # Need to append the overall counter as this is just a slice of the signal
+                            q_segment_indexs.append(q_segment_index + last_index)
+                            
+                            print("q_segment: " + str(q_segment))
+                            print("q_segment_index: " + str(q_segment_index))
+                    
                     # t peak has to come after r peak - r peak is always found. Only allow if rpeak != 0
-                    elif section_peaks < 400 and r_segment != 0: 
+                    elif section_peaks < 400 and r_segment != 0 and t_segment == 0: 
                         print("Appending t Peak")
                         # Set t segment height and position
                         t_segment = section_peaks
@@ -178,8 +136,9 @@ class PeakValleyDetection:
                         t_segment_peaks.append(t_segment)
                         # Need to add last index because this is only 1 heartbeat out of the whole ecg
                         t_segment_indexs.append(last_index + t_segment_index)
+                        
                     # p peak has to come before r segment.
-                    elif section_peaks < 400 and r_segment == 0:
+                    elif section_peaks < 400 and r_segment == 0 and p_segment == 0:
                         print("Appending p Peak")
                         # Set p segment height and position
                         p_segment = section_peaks
@@ -191,50 +150,64 @@ class PeakValleyDetection:
                     
                     # Look for peaks around next R Peak
                     signal_peaks_counter += 1
-                #prsSectionPeaks.extend(signal_peaks[1]['peak_heights'])
                 
-                # For testing only - Remove if not neede for plot TODO
+                # For plotting the array
                 x = []
-                y = []
                 c = 0
                 for d in averaged_ecg_data:
                     x.append(c)
                     c+=1
-                # TODO For testing purposes only
-                plt.plot(averaged_ecg_data[last_index:index], '-', x[q_segment_index:s_segment_index], averaged_ecg_data[q_segment_index:s_segment_index], 'y-', p_segment_index, p_segment, 'ro', q_segment_index, q_segment, 'co', r_segment_index, r_segment, 'bo', s_segment_index, s_segment, 'mo', t_segment_index, t_segment, 'go')
-                plt.legend(['ECG Signal', 'QRS Segment', 'P Peak', 'Q Valley', 'R Peak', 'S Valley', 'T Peak'], loc='best')
-                plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(mean_of_data[0]))
-                plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                folder_to_save_to = folder_location +'/Graphs/Part 5 - Individual Heart Beats Plotted Against PRT-Peaks/'
-                # Make sure directory exists to save file to
-                Util.saveGraph(folder_to_save_to, file_name + " BEAT " + str(counter + 1)) 
-                counter += 1
+                    
+                # Plotting all 5 segments as individual heartbeats to a graph
+                plt.plot(averaged_ecg_data[last_index:index], '-', p_segment_index, p_segment, 
+                         'ro', q_segment_index, q_segment, 'co', r_segment_index, r_segment, 'bo', 
+                         s_segment_index, s_segment, 'mo', t_segment_index, t_segment, 'go')
                 
+                # Setting the legend for the plot
+                plt.legend(['ECG Signal', 'P Peak', 'Q Valley', 'R Peak', 'S Valley', 'T Peak'], 
+                           loc='best')
+                # Setting the plot title
+                plt.title('Single Beat PQRST-Peaks Plotted Against ECG Data', fontsize = 20)
+                folder_to_save_to = folder_location +'/Graphs/Part 10 - Individual Heart Beats Plotted Against Found PQRST Sections/'
+                # Make sure directory exists to save file to and save the file
+                Util.saveGraph(folder_to_save_to, file_name + " BEAT " + str(counter + 1)) 
+                
+                # Incriment the counter for the name
+                counter += 1
                 # Change the last index to be the current index
                 last_index = index
         
-        # Adding the averaged_ecg_data to the graph
-        plt.plot(averaged_ecg_data, '-', p_segment_indexs, p_segment_peaks, 'ro', r_segment_indexs, r_segment_peaks, 'bo', t_segment_indexs, t_segment_peaks, 'go')
-        plt.legend(['ECG Signal', 'P Peak', 'R Peak', 'T Peak'], loc='best')
+        # Adding the averaged_ecg_data to the graph with all found PQRST Sections
+        plt.plot(averaged_ecg_data, '-', p_segment_indexs, p_segment_peaks, 'co', q_segment_indexs, 
+                 q_segment_peaks, 'ro', r_segment_indexs, r_segment_peaks, 'bo', s_segment_indexs, 
+                 s_segment_peaks, 'mo', t_segment_indexs, t_segment_peaks, 'go')
+        # Adding the legend 
+        plt.legend(['ECG Signal', 'P Peak', 'Q Valley', 'R Peak', 'S Valley', 'T Peak'], loc='best')
+        # Adding the title
         plt.title('PRT-Peaks Plotted Against ECG Data', fontsize = 20)
         
-        folder_to_save_to = folder_location +'/Graphs/Part 6 - PRT-Peaks Plotted Against Averaged ECG Signal With Biological Drift Removed/'
+        folder_to_save_to = folder_location +'/Graphs/Part 11 - PQRST Sections Plotted Against Processed Averaged ECG Signal/'
         
-        # Make sure directory exists to save file to
+        # Make sure directory exists to save file to and save the graph
         Util.saveGraph(folder_to_save_to, file_name) 
-    
+        
+        # Calculate the PQRST sections in seconds rather than samples and save to Excel + graph
+        Util.pqrstToSeconds(p_segment_indexs, q_segment_indexs, r_segment_indexs, s_segment_indexs, 
+                              t_segment_indexs, folder_location, file_name) 
     
     # A function to find the Q and S valleys which reside at the bottom of the R peak in the QRS Complex
-    def findValleys(mean_of_data, r_peak_index, ecg_data_heartbeat_slice, signal_peaks, signal_peaks_counter, folder_location, file_name):
-        print("TODO")
+    def findValleys(mean_of_data, r_peak_index, ecg_data_heartbeat_slice, signal_peaks, signal_peaks_counter, 
+                    folder_location, file_name):
         
-        #segment_test_number is equal to the mean of the data initially
+        # segment_test_number is equal to the mean of the data initially
+        # This changes to be the most recent data that we are testing
         segment_test_number = mean_of_data[0]
+        # Stops the if statement from running after valley has been found
         break_counter = 0
         
         segment_search_counter = 0
-        # Find index of r peak and go to the end of the data to start the search
-        # TODO, can i not just pass this value if the "Todo value is fixed rather than sending hearbeat_slice as it is?
+        
+        # Find index of r peak inside of the dataset and use data between here and the end for the search
         for segment_search in ecg_data_heartbeat_slice[r_peak_index : ]:
             # Q and S Segments should always be below mean_of_data
             if segment_search < mean_of_data[0]:
@@ -243,35 +216,35 @@ class PeakValleyDetection:
                     segment_test_number = segment_search
                     segment_search_counter += 1
                 elif break_counter != 1:
-                        # I think we found the S Segment # TODO issues from here . need to return this data somehow
-                        # TODO For testing purposes only
+                        # We found the Q or S Segment
+                        # Set the segment and it's index
                         segment = segment_test_number
                         segment_index = r_peak_index + segment_search_counter
+                        # Stop this elif  from being called again
                         break_counter = 1
-                        #print('s_segment_search (' + str(s_segment_search) + ') - segment_test_number (' + str(segment_test_number) + ') = ' + str((s_segment_search) - (s_segment_to_test)))
-                        plt.plot(ecg_data_heartbeat_slice, '-', r_peak_index + segment_search_counter, segment_test_number, 'ro')
-                        plt.legend(['ECG Signal', 'P Peak'], loc='best')
+                        # Plot the individual heartbeat and the valley (segment) that was found
+                        plt.plot(ecg_data_heartbeat_slice, '-', segment_index, segment, 'ro')
+                        plt.legend(['ECG Signal', 'Valley'], loc='best')
                         plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(mean_of_data[0]))
                         plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
-                        folder_to_save_to = folder_location +'/Graphs/Hopefully the S Segment/'
-                        # Make sure directory exists to save file to
-                        # TODO - call with the counter part already added...
-                        Util.saveGraph(folder_to_save_to, file_name) 
                         
+                        # Make sure directory exists to save file to and save graph
+                        Util.saveGraph(folder_location, file_name) 
+                                                
                         # Return the segment that was found and it's index
                         return [segment, segment_index]
-                # Counter needs incrementing anyway
-                else:
-                    segment_search_counter += 1
-                        
+            # Move on to the next datapoint because we are not below mean yet and increment counter
+            else:
+                segment_search_counter += 1
     
     
-    # Function to detect peaks in the data.
+    # Function to detect r-peaks in the data.
     # Heart Rate is then calculated from these peaks and is saved into an Excel file
-    def findQrsComplex(averaged_ecg_data, folder_location, file_name):
+    # R-Peaks are returned to calculate individual beats
+    def findHeartRate(averaged_ecg_data, folder_location, file_name):
         # Returns 2 arrays. One containing the location of the peaks in the array
-        # The other containing the value of the peak # TODO - Shouldnt this height be higher? Probably more like 400? # SHOULD DISTANCE BE 30? (200bpm over 6000 samples = 30) - REFERENCED AS 30 in report
-        signal_peaks = signal.find_peaks(averaged_ecg_data, height=200, distance=200)
+        # The other containing the value of the peak 
+        signal_peaks = signal.find_peaks(averaged_ecg_data, height=400, distance=200)
         print(signal_peaks[0])
         print(signal_peaks[1]['peak_heights'])
         
@@ -286,8 +259,6 @@ class PeakValleyDetection:
         # Adding the heartrate to the array
         heart_rate_data_to_save[1][0] = str(heart_rate)
         
-        #TODO change Mv on graphs to mV
-        
         # Calculates the Heart Rate zone of the participant (Uses 25 year old for calculation)
         heart_rate_zone = Util.calculateHeartRateZone(heart_rate)
         # Adding Heart Rate Zone to array
@@ -297,13 +268,14 @@ class PeakValleyDetection:
         # Save heart rate data to file for user
         Util.saveToCsv(heart_rate_data_to_save, folder_location +'/Results/', file_name + ' Heartrate Results')
         
-        # Adding the averaged_ecg_data to the graph
+        # Adding the averaged_ecg_data to the graph against r-peaks
         plt.plot(averaged_ecg_data, '-', signal_peaks[0], signal_peaks[1]['peak_heights'], 'o')
         plt.legend(['ECG Signal', 'R-Peaks'], loc='best')
         plt.title('R-Peaks Plotted Against ECG Data', fontsize = 20)
+        # Add heartrate to graph
         plt.text(0.5, 0.5, 'Heart Rate = ' + str(heart_rate))
         
-        folder_to_save_to = folder_location +'/Graphs/Part 3 - (R-Peaks Plotted Against Averaged ECG Data With Biological Drift Removed)/'
+        folder_to_save_to = folder_location +'/Graphs/Part 6 - (R-Peaks Plotted Against Averaged ECG Data With Biological Drift Removed)/'
         
         # Make sure directory exists to save file to
         Util.saveGraph(folder_to_save_to, file_name) 
@@ -314,8 +286,12 @@ class PeakValleyDetection:
     
 class Fft:
     
-    # TODO - Do i need running mean datapoints here?
     # Calculate the FFT using the averaged ECG Data
+    # Take the FFT data and filter out negatives
+    # Block of code taken from http://scipy-lectures.org/intro/scipy/auto_examples/plot_fftpack.html
+    # This block has been understood and annotated. The block will start from "# Below Block Is Copied"
+    # and run until "#End of copied block"
+    # Attempted different filters but all caused more noise.
     def calculateFft(averaged_ecg_data, running_mean_datapoints, folder_location, file_name):
         
         # Calculates discrete fourier transform using FFT (fast fourier transform)
@@ -324,57 +300,72 @@ class Fft:
         # This gets the Discrete fourier transforms frequencies
         freq = np.fft.fftfreq(len(averaged_ecg_data))
         
-        print('freq = ' + str(freq))
+        #print('freq = ' + str(freq))
         
-        # Below block is copied from here http://scipy-lectures.org/intro/scipy/auto_examples/plot_fftpack.html
+        # Below Block Is Copied 
+        # Get the absolute values for the frequencies which have been found
         power = np.abs(average_ecg_fft)        
+        # Returns element where the frequency is greater than 0
         pos_mask = np.where(freq > 0)
+        # Returns frequencies found from pos_mask
         freqs = freq[pos_mask]
+        # Looks for frequencies that are only positive
         peak_freq = freqs[power[pos_mask].argmax()]
+        # Removes frequencies which are less than the peak_freq
         average_ecg_fft[np.abs(freq) < peak_freq] = 0
-        filtered_sig = np.fft.ifft(average_ecg_fft)
-        print("FFT WITH MATH = " + str(average_ecg_fft))
+        # End of copied block
         
-        folder_to_save_to = folder_location +'/Graphs/Part 8 - Averaged ECG Data (Drift Removed) As FFT FREQ/'
+        #Converts the frequencies back to timeseries data
+        filtered_ecg_signal = np.fft.ifft(average_ecg_fft)
+        
+        # Saves the none-filtered FFT
+        plt.title('Averaged ECG Signal As FFT Frequencies', fontsize = 20)
+        folder_to_save_to = folder_location +'/Graphs/Part 3 - Averaged ECG Data (Drift Removed) As FFT Frequencies/'
         plt.plot(average_ecg_fft)
         Util.saveGraph(folder_to_save_to, file_name)
         
-        folder_to_save_to = folder_location +'/Graphs/Part 9 - Averaged ECG Data (Drift Removed) As FFT FREQ/'
-        plt.plot(filtered_sig)
+        # Saves the filtered FFT
+        folder_to_save_to = folder_location +'/Graphs/Part 4 - Averaged ECG Data (Drift Removed) As FFT filtered ECG Signal/'
+        plt.title('FFT Filtered Averaged ECG Signal', fontsize = 20)
+        plt.plot(filtered_ecg_signal)
         Util.saveGraph(folder_to_save_to, file_name)
         
-        #plots the freq against the length
-        #plt.plot(freq, np.abs(average_ecg_fft))
-        #self.saveGraph(folder_to_save_to, file_name)        
+        # Returns the filtered ecg signal       
+        return filtered_ecg_signal
         
         
-        
+# A class that contains useful functions that are used throughout the program in multiple classes
 class Util:
     
     # Function to make a directory using python to save the graphs to.   
     def saveGraph(folder_to_save_to, file_name):
+        # Attempt to make the folder
         try:
             os.mkdir(folder_to_save_to)
             print('The Directory: ' + folder_to_save_to + ' Has Been Created. Saving Data')
+        # The folder already exists
         except:
             print('The Directory: ' + folder_to_save_to + ' Already Exists. Saving Data')
         
         # Set X and Y Labels on the plot
         plt.xlabel('Time in 600ths of a second', fontsize = 14)
-        plt.ylabel('Amplitude in Mv (Millivolts)', fontsize = 14)
+        plt.ylabel('Amplitude in mV (Millivolts)', fontsize = 14)
         
         plt.show()
         
-        # Save and clear the plot
+        # Save the plot
         # bbox_inches = "tight" is to make sure that the whole of the graph fits within the image
         plt.savefig(folder_to_save_to + file_name + '.png', bbox_inches = "tight")
         plt.cla() # Clear the plot
     
     
-    # Method to find the individual beats 
+    # Method to find the individual beats
+    # Takes R-Peaks and finds the datapoints inbetween the next and previous R-Peak.
+    # Slices at these datapoints and returns where they are
     def findIndividualBeats(averaged_ecg_data, signal_peaks, folder_location, file_name):
         
-        # Array to hold the datapoints index's inbetween the peaks - Meaning the end of one beat and the start of the next
+        # Array to hold the datapoints index's inbetween the peaks - 
+        # Meaning the end of one beat and the start of the next
         start_of_beat_array = []
         
         # Counter for r sections iterated through
@@ -385,7 +376,8 @@ class Util:
         
         # For the amount of peaks that we have, calculate midway point between peaks
         for signal_location in signal_peaks[0]:
-            # Add '0' to array because we need to start here (first peak doesnt have an obvious midpoint before it)
+            # Add '0' to array because we need to start here 
+            # (first peak doesnt have an obvious midpoint before it)
             if r_section_counter == 0:
                 start_of_beat_array.append(0)
                 
@@ -400,7 +392,8 @@ class Util:
                 midway_point_difference = int(round((signal_location - previous_section) / 2))
                 start_of_beat_array.append(signal_location - midway_point_difference)
                 
-                # if this is the last peak we can add 6000 to array because there are no obvious mid points past this location
+                # if this is the last peak we can add 6000 to array because there are no obvious mid points 
+                # past this location
                 if r_section_counter == len(signal_peaks[0]) - 1:
                     start_of_beat_array.append(len(averaged_ecg_data) - 1)
                 
@@ -419,21 +412,28 @@ class Util:
         for index in start_of_beat_array:
             mid_r_section_values.append(averaged_ecg_data[index])
         
+        # Plot the splits on a graph
+        plt.title('Averaged ECG Data and Heartbeat Splitting Points', fontsize = 20)
         plt.plot(averaged_ecg_data, '-', start_of_beat_array, mid_r_section_values, 'o')
         plt.legend(['Averaged ECG Data - Drift Removed', 'Heart Beat Section Points'], loc='best')
         
-        folder_to_save_to = folder_location +'/Graphs/Part 4 - Averaged ECG Data With Drift Removed Plotted With Individual Heart Beat Cuts/'
+        folder_to_save_to = folder_location +'/Graphs/Part 7 - Averaged ECG Data With Drift Removed Plotted With Individual Heart Beat Cuts/'
         Util.saveGraph(folder_to_save_to, file_name)
         
         return start_of_beat_array
         
     
     # Function to find zero crossings in data set
+    # Not used anymore. Attempted to use this to help in this software.
+    # Could be used for illustration purposes to show the split in the graph but can do this in other ways now.
+    # Such as the drift removal graph which shows the change in data when drift is removed
     def findZeroCrossings(averaged_ecg_data, mean_of_data, running_mean_datapoints, folder_location, file_name):
         print("Finding Zero Crossings")
         
-        last_data_point = mean_of_data
+        # Last data point that is checked
+        last_data_point = mean_of_data [0]
         
+        # Amount of datapoints found over and under
         data_under = 0
         data_over = 0
         
@@ -441,27 +441,36 @@ class Util:
         zero_crossings_counter = 0
         zero_crossings_plot_array = []
         
+        # Iterate through the data
         for data_point in averaged_ecg_data:
             
+            # Add 1 to the counter
             zero_crossings_counter += 1
+            # Append the data
             zero_crossings_plot_array.append(data_point)
             
             # If data has gone above crossing point
             if data_point >= running_mean_datapoints[zero_crossings_counter-1] and last_data_point < running_mean_datapoints[zero_crossings_counter-1]:
+                # Add one to the counter
                 data_over += 1
                 
+                # Plot on the graph
                 plt.plot(zero_crossings_plot_array, 'b')
+                #Clear the array because it has gone over the mean
                 zero_crossings_plot_array.clear()
                 data_over_array = [np.nan] * zero_crossings_counter
                 zero_crossings_plot_array.extend(data_over_array)
                 
             # If data has gone below crossing point    
             elif data_point < running_mean_datapoints[zero_crossings_counter-1] and last_data_point > running_mean_datapoints[zero_crossings_counter-1]:
+                # add one to the counter
                 data_under += 1
-                # TODO - Testing 
+                # Plot on the graph
                 plt.plot(zero_crossings_plot_array, 'r')
+                # Clear the array because it has gone under the mean
                 zero_crossings_plot_array.clear()
                 data_under_array = [np.nan] * zero_crossings_counter
+                # Extend the array for a graph
                 zero_crossings_plot_array.extend(data_under_array)
                 
                 
@@ -469,17 +478,8 @@ class Util:
             last_data_point = data_point # Set last datapoint to this data point
         
         print('Data Over = ' + str(data_over) + ' And Data Under = ' + str(data_under))
-        
-        # plt.plot(averaged_ecg_data) # Plot ecg data
-        
-        # Is this needed?
-        y = []
-       
-        for x in range(1, 6001):
-            y.append(x)
-        
-        # blah = interp1d(running_mean_datapoints, y, kind='cubic')
-        
+
+        # Plot the running mean        
         plt.plot(running_mean_datapoints)
         
         # To add the mean of the data to the graph
@@ -487,13 +487,8 @@ class Util:
         
         folder_to_save_to = folder_location +'/Graphs/ECG Data plotted against Moving Point Average/'
         
-        # Make sure directory exists to save file to
+        # Make sure directory exists to save file to and save the graph
         Util.saveGraph(folder_to_save_to, file_name)
-        
-        #Probably remove from here and put elsewhere......
-        #Fft.calculateFft(averaged_ecg_data, running_mean_datapoints, folder_location, file_name)
-        #for csvData in ecgData:
-         #   print("Data = " + str(ecgData))
         
         
     # Function to find the distance between two numbers
@@ -525,6 +520,7 @@ class Util:
         try:
             os.mkdir(folder_to_save_to)
             print('The Directory: ' + folder_to_save_to + ' Has Been Created. Saving Data')
+        # If folder already exists
         except:
             print('The Directory: ' + folder_to_save_to + ' Already Exists. Saving Data')
         
@@ -560,26 +556,30 @@ class Util:
     # Returns an array with 6000 datapoints of the mean of data for plotting on a graph
     def calculateMeanOfData(averaged_ecg_data):
         
+        # Create variables to hold total and the counter
         ecg_mean = 0.0
         ecg_mean_counter = 0
         
+        # Get total and increment counter
         for data in averaged_ecg_data:
             ecg_mean += data
             ecg_mean_counter += 1
-            
+        
+        # Calculate mean and add to array
         mean_of_data = [ecg_mean / ecg_mean_counter] * 6000
         print("Mean of averaged_ecg_data = " + str(mean_of_data[0]))
         
+        # Return array
         return mean_of_data
     
-    # TODO Explain how this only shows heart rate zones for a 25 year old (Will not work for other ages)
-    # Even then its a guestimate. 
-    # TODO - EXCERCISE ZONES TAKEN FROM HERE - https://commons.wikimedia.org/wiki/File:Exercise_zones.png
-    # Calculates Heart Rate Zone
+    # Excercise zone chart used as the main basis - https://commons.wikimedia.org/wiki/File:Exercise_zones.png
+    # Calculates Heart Rate Zone (Based on a 25 year old due to my age)
     def calculateHeartRateZone(heart_rate):
         
+        # Sets an empty string for the heartrate zone
         heart_rate_zone = ""
         
+        # Uses heartrate to calculate which zone the person is in (based on a 25 year old)
         if heart_rate <= 80:
             heart_rate_zone = "Resting"
         elif heart_rate > 80 and heart_rate <= 98:
@@ -595,5 +595,73 @@ class Util:
         elif heart_rate > 176 and heart_rate <= 195:
             heart_rate_zone = "VO2 Max (Maximum Effort)"
             
+        # Returns the zone
         return heart_rate_zone
+    
+    
+    # Function that finds the PQRST sections in seconds rather than samples. 
+    # This data is then saved to a CSV file
+    # Amplitude is not saved, only the time at which the segment occured
+    def pqrstToSeconds(p_segment_indexs, q_segment_indexs, r_segment_indexs, s_segment_indexs, t_segment_indexs, 
+                         folder_to_save_to, file_name): 
+        
+        # Initializes a multidimensional array
+        # If a heart is beating at  200 bpm, the max beats in 1/6th of a minute is 33.3 Make array size 40
+        pqrst_data_to_save = [[0 for x in range(5)] for y in range(40)] # Initializes array as 40x5 
+        
+        # Save the column names
+        pqrst_data_to_save[0][0] = "P Waves (Seconds)"
+        pqrst_data_to_save[0][1] = "Q Waves (Seconds)"
+        pqrst_data_to_save[0][2] = "R Waves (Seconds)"
+        pqrst_data_to_save[0][3] = "S Waves (Seconds)"
+        pqrst_data_to_save[0][4] = "T Waves (Seconds)"
+        
+        # For each point that was found
+        p_wave_counter, q_wave_counter, r_wave_counter, s_wave_counter, t_wave_counter = [1, 1, 1, 1, 1]
+        # Find time in seconds for p waves
+        # Welch Allyn system uses 600hz. This means 600 times a second. 
+        # To find out how many milliseconds has passed, we divide the index by 600
+        for p_index in p_segment_indexs:
+            if p_index != 0: # Stops 0's from being added to the csv file
+                pqrst_data_to_save[p_wave_counter][0] = str(p_index / 600)
+                p_wave_counter +=1
+        # For q waves  
+        for q_index in q_segment_indexs:
+            if q_index != 0:
+                pqrst_data_to_save[q_wave_counter][1] = str(q_index / 600)
+                q_wave_counter +=1
+        # For r waves   
+        for r_index in r_segment_indexs:
+            if r_index != 0:
+                pqrst_data_to_save[r_wave_counter][2] = str(r_index / 600)
+                r_wave_counter +=1
+        # For S waves    
+        for s_index in s_segment_indexs:
+            if s_index != 0:
+                pqrst_data_to_save[s_wave_counter][3] = str(s_index / 600)
+                s_wave_counter +=1
+        # For t waves      
+        for t_index in t_segment_indexs:
+            if t_index != 0:
+                pqrst_data_to_save[t_wave_counter][4] = str(t_index / 600)
+                t_wave_counter +=1
+        
+        # Save total waves found for each section
+        # R is most reliably found - Use r counter to set where to save this data
+        counter_array = [p_wave_counter, q_wave_counter, r_wave_counter, s_wave_counter, t_wave_counter]
+        print("Counter array = " + str(counter_array))
+        # Save the waves in their proper rows
+        for i in range(5):
+            pqrst_data_to_save[r_wave_counter + 4][i] = "Total Found"
+            pqrst_data_to_save[r_wave_counter + 5][i] = str(counter_array[i] - 1)
+            
+        # Remove any zeros from array which were created upon initialization
+        for x in range(5):
+            for y in range(40):
+                if pqrst_data_to_save[y][x] == 0:
+                    pqrst_data_to_save[y][x] = ""
+            
+        # Save heart PQRST data to file for user
+        Util.saveToCsv(pqrst_data_to_save, folder_to_save_to +'/Results/', file_name + ' PQRST Sections In Seconds')
+        print("Saved file: " + folder_to_save_to + "/Results/" + file_name + " PQRST Sections In Seconds")
     #__init__.py

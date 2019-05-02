@@ -158,9 +158,6 @@ class createMainWindow(QMainWindow):
                         
                         # create the averaged signal from the other 8 leads for this row of data
                         averaged_signal = SingleSignal.createAveragedSignal("".join(previous_chars))
-
-        
-                        # TODO WHAT DOES THIS DO
                         previous_chars.append("," + str(averaged_signal))
                         
                         # To save to the averaged signal list
@@ -180,6 +177,10 @@ class createMainWindow(QMainWindow):
             # The running mean datapoints which are needed for cubic interpolation.
             running_mean_datapoints = SingleSignal.calculateRunningMean(averaged_signal_data, 400)
             
+            # Function to find zero crossings on the averaged signal in the data set
+            # Plots the split of data across the mean (showing how unreliable the data is around the mean)
+            # Util.findZeroCrossings(averaged_signal_data, mean_of_data, mean_of_data, folder_location, file_name)
+            
             # Calculate Cubic Interpolation
             # Uses the running average sections previously calculated to find the moving average
             cubicly_interpolated_datapoints = SingleSignal.calculateInterpolation(averaged_signal_data, 
@@ -192,45 +193,35 @@ class createMainWindow(QMainWindow):
                                                                   cubicly_interpolated_datapoints, 
                                                                   mean_of_data, folder_location, file_name)
             
-            # TODO POSSIBLY REMOVE (running mean max datapoints = 10?)
-            # IF THIS WORKS (THEN GREAT) BUT IF IT DOESNT, TAKE THE RUNNINGMEANMAX VARIABLE AND PUT IT 
-            # BACK TO 400 IN SIGNAL PROCESSING. IF THIS DOES WORK WE WILL NEED CUBIC INTERPOLATION TO FILL IN GAPS
-            averaged_ecg_drift_removed = SingleSignal.calculateRunningMean(averaged_ecg_drift_removed, 
+            # To calculate the individual frequencies in the signal and remove frequencies that arent viable
+            # (The negative signals)
+            filtered_ecg_signal = Fft.calculateFft(averaged_ecg_drift_removed, running_mean_datapoints, folder_location, file_name)
+            
+            # Removes the muscular noise from the signal by smoothing the noise out - Calculates running mean again
+            # but on less datapoints
+            averaged_ecg_drift_removed = SingleSignal.calculateRunningMean(filtered_ecg_signal, 
                                                                            running_mean_max_datapoints = 10)
+            
             averaged_ecg_drift_removed = SingleSignal.calculateInterpolation(averaged_ecg_drift_removed, 
                                                                              averaged_ecg_drift_removed, 
                                                                              'linear', folder_location, 
                                                                              file_name)
-            
-            # TODO - Doesnt return anything???
-            # To calculate the individual frequencies in the signal and remove frequencies that arent viable
-            Fft.calculateFft(averaged_ecg_drift_removed, running_mean_datapoints, folder_location, file_name)
-            
-            #TODO rename this to something based on r and not qrs. 
+             
             # Finds the R-Peaks in the signal
-            r_peaks = PeakValleyDetection.findQrsComplex(averaged_ecg_drift_removed, folder_location, file_name)
+            r_peaks = PeakValleyDetection.findHeartRate(averaged_ecg_drift_removed, folder_location, file_name)
             
             # To find individual beats
             start_end_of_beats = Util.findIndividualBeats(averaged_ecg_drift_removed, r_peaks, folder_location, file_name)
             
             # To try and find the P and T Peaks within the individual beats
+            # After these are found the Q and S valleys are found using the r peak
             PeakValleyDetection.findPeaks(averaged_ecg_drift_removed, start_end_of_beats, folder_location, file_name)
-            
-            # TODO Can add this again - But need to make a new folder for it possibly
-            # Function to find zero crossings on the averaged signal in the data set
-            # QrsDetection.findZeroCrossings(averaged_signal_data, mean_of_data, running_mean_datapoints, folder_location, file_name)
-            
-            
-        # TODO where should i used this function?
-        # Function to find zero crossings for the averaged signal of the dataset using the 
-        #Util.findZeroCrossings(averaged_signal_data, 0, y_new, folder_location, file_name)
         
   
-  # Call the main function
+  # Call the main function that opens up the UI
 if __name__ == '__main__':
   def run_folder_selector_ui():
         print("UI Running - User can now select the folder containing their data")
-        # Boiler plate code - https://github.com/spyder-ide/spyder/wiki/How-to-run-PyQt-applications-within-Spyder
         app = QtWidgets.QApplication(sys.argv)
         main_win = createMainWindow()
         main_win.show()
@@ -239,19 +230,3 @@ if __name__ == '__main__':
   # Allows for the document selector method to run
   run_folder_selector_ui()
       
-  # DONE
-     # Average leads file is clean. 
-     
-     
-   ## TODO- Delete this list
-   # Make sure all errors are resolved
-   # Make sure all graph folders numbers are correct and graphs are named properly
-     # Change names of graph name, legend and x y axis on matplotlib for what they actually are (Some are in freq domain, others in mv)
-   # Check for TODOS and swears
-   # signalProcessing.py is a mess - clean it
-   # Change readme to explain how to use this program compared to the other programs
-   # Search for question marks
-   # Make sure code is in right order for how it is called
-
-  # Find rough amount of time that pqrst sections should last for dependant on heart rate and calculate this
-  # Write tests for the code

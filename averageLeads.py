@@ -113,7 +113,7 @@ class SingleSignal:
             plt.plot(averaged_signal_data, 'b-')
             plt.legend(['Averaged ECG Signal'], loc='best')
             # Set where the graph should be saved to
-            folder_to_save_to = folder_location +'/Graphs/Part 3 - (ECG Signal with drift and muscular noise removed)/'
+            folder_to_save_to = folder_location +'/Graphs/Part 5 - (ECG Signal with drift, negative frequencies and muscular noise removed)/'
         
         # Save the graph to the correct directory
         Graph.saveGraph(folder_to_save_to, file_name)
@@ -170,7 +170,7 @@ class Graph:
             
         # Set X and Y Labels on the plot
         plt.xlabel('Time in 600ths of a second', fontsize = 14)
-        plt.ylabel('Amplitude in Mv (Millivolts)', fontsize = 14)
+        plt.ylabel('Amplitude in mV (Millivolts)', fontsize = 14)
         
         # Save and clear the plot
         # bbox_inches = "tight" is to make sure that the whole of the graph fits within the image

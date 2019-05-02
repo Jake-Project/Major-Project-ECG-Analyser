@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import QMainWindow, QLabel, QGridLayout, QWidget, QSizePoli
 from PyQt5.QtCore import QSize 
 
 from averageLeads import SingleSignal 
-from signalProcessing import PeakDetection
+from signalProcessing import PeakValleyDetection
 from signalProcessing import Fft
 from signalProcessing import Util
 
@@ -45,15 +45,29 @@ class createMainWindow(QMainWindow):
         QMainWindow.__init__(self)
 
         self.setMinimumSize(QSize(800, 600))    
-        self.setWindowTitle(
-                "Please select a window containing all of the data you want "
-                "to test in CSV format") 
+        self.setWindowTitle("ECG Analyzer")
         
         central_widget = QWidget(self)          
-        self.setCentralWidget(centralWidget)   
+        self.setCentralWidget(central_widget)   
  
         grid_layout = QGridLayout(self)     
         central_widget.setLayout(grid_layout)  
+        
+        # Create textbox and set paragraph
+        paragraph = QLabel()
+        paragraph.setText("Welcome to ECG Analyzer! \nPress 'Cntrl + O' or 'File -> Open' to search for a folder containing ECG data." +
+                          "\nPress 'Cntrl + W', 'Cntrl + Q' or 'File -> Quit' to quit the software. " +
+                          "\n\n1. Select a folder containing ECG data in CSV format which has been exported from" +
+                          " ECG Toolkit 2.4." +
+                          "\n2. Open the folder" +
+                          "\n3. The software will iterate through the files inside of this folder and save graphs" +
+                          " showing the different processes that the ECG data is going through. \n4. These graphs will" +
+                          " be saved inside of folder called 'Graphs' where the original data is located." +
+                          "\n5. Another folder will also be generated called 'Results' which contains the" +
+                          " individual PQRST sections along with the Heartrate and Excercise zone found from the data" +
+                          "\n6. Finally, another folder will be created called 'CSV Formatted' which contains the " +
+                          "original CSV data and the averaged data but formatted correctly")
+        grid_layout.addWidget(paragraph, 0, 0)
         
         # File Menu options
         file = self.menuBar().addMenu('File')
@@ -105,6 +119,9 @@ class createMainWindow(QMainWindow):
     # Takes the location of the folder which the data is stored as well as the 
     # name of the file which we are currently reading
     def processCsvData(self, folder_location, file_name):
+        # Make initial folders (Graphs, Results and CSV Formatted)
+        Util.createMainFolders(folder_location)
+        
         print("Parsing CSV data to an array")
         # Opens the folderLocation and fileName to read.
         file = open(folder_location + '/' + file_name, 'r')
@@ -153,6 +170,9 @@ class createMainWindow(QMainWindow):
                     #print("Data Line")
                     #print(rawDataLines)
                     previous_chars.clear()
+                    
+            # Save the formatted CSV incuding the averaged data out to a file for easier readability
+            Util.saveToCsv(raw_data_lines, folder_location + "/CSV Formatted/", file_name + " Formatted")
 
             # The overall mean of the data without any more processing
             mean_of_data = Util.calculateMeanOfData(averaged_signal_data)
@@ -188,13 +208,13 @@ class createMainWindow(QMainWindow):
             
             #TODO rename this to something based on r and not qrs. 
             # Finds the R-Peaks in the signal
-            r_peaks = PeakDetection.findQrsComplex(averaged_ecg_drift_removed, folder_location, file_name)
+            r_peaks = PeakValleyDetection.findQrsComplex(averaged_ecg_drift_removed, folder_location, file_name)
             
             # To find individual beats
             start_end_of_beats = Util.findIndividualBeats(averaged_ecg_drift_removed, r_peaks, folder_location, file_name)
             
             # To try and find the P and T Peaks within the individual beats
-            PeakDetection.findPeaks(averaged_ecg_drift_removed, start_end_of_beats, folder_location, file_name)
+            PeakValleyDetection.findPeaks(averaged_ecg_drift_removed, start_end_of_beats, folder_location, file_name)
             
             # TODO Can add this again - But need to make a new folder for it possibly
             # Function to find zero crossings on the averaged signal in the data set
@@ -223,18 +243,15 @@ if __name__ == '__main__':
      # Average leads file is clean. 
      
      
-   ## TODO
+   ## TODO- Delete this list
    # Make sure all errors are resolved
-   # Make sure all graph folders are correct and graphs are named properly
-   # Make sure that graphs fit in image correctly
-   # Make sure that graph x and y labels are set correctly
-  # Save time differences on average betwween different sections found on the ECG
+   # Make sure all graph folders numbers are correct and graphs are named properly
+     # Change names of graph name, legend and x y axis on matplotlib for what they actually are (Some are in freq domain, others in mv)
+   # Check for TODOS and swears
+   # signalProcessing.py is a mess - clean it
+   # Change readme to explain how to use this program compared to the other programs
+   # Search for question marks
+   # Make sure code is in right order for how it is called
+
   # Find rough amount of time that pqrst sections should last for dependant on heart rate and calculate this
-  # Talk about library needed to be downloaded in PyQt to make the code work!!!!!
-  # Incorporate figures - detailed figure captions so that the reader understands what they are looking at
   # Write tests for the code
-  # Use correct naming constraints. Should it be  house_party or houseParty? is it the same for both methods, functions and variables?
-  # Fix issue with UI not working correctly for the file button. Maybe add a graphic
-  # Change readme to explain how to use this program compared to the other programs
-  # Change scale on output from matplotlib so that instead of being every 600 seconds its every second
-  # Change names of graph name and x y axis on matplotlib for what they actually are (Some are in freq domain, others in mv)

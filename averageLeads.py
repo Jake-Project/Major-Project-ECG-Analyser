@@ -101,11 +101,10 @@ class SingleSignal:
         if type_of_interpolation == 'cubic':
             plt.title('Cubicly Interpolated Running Mean Against Averaged ECG Signal', fontsize = 20)
             # Plot the data ready to be saved as a graph
-            plt.plot(averaged_signal_data, 'b-', interpolated_data, 'ro')
+            plt.plot(averaged_signal_data, 'b-', interpolated_data, 'r-')
             plt.legend(['Averaged ECG Signal', 'Cubic Interpolation Of Running Average Sections'], loc='best')
             # Set where the graph should be saved to
-            folder_to_save_to = folder_location +'/Graphs/Part 1 - (Running Mean Cubic Interpolation Paired' +
-                                                                                ' With Averaged Signal Data)/'
+            folder_to_save_to = folder_location +'/Graphs/Part 1 - (Running Mean Cubic Interpolation Paired With Averaged Signal Data)/'
             
         # Linear is used to average out muscle noise
         elif type_of_interpolation == 'linear':
@@ -114,8 +113,7 @@ class SingleSignal:
             plt.plot(averaged_signal_data, 'b-')
             plt.legend(['Averaged ECG Signal'], loc='best')
             # Set where the graph should be saved to
-            folder_to_save_to = folder_location +'/Graphs/Part 3 - (ECG Signal with drift and muscular ' +
-                                                                                        'noise removed)/'
+            folder_to_save_to = folder_location +'/Graphs/Part 3 - (ECG Signal with drift and muscular noise removed)/'
         
         # Save the graph to the correct directory
         Graph.saveGraph(folder_to_save_to, file_name)
@@ -169,12 +167,13 @@ class Graph:
             print('The Directory: ' + folder_to_save_to + ' Has Been Created. Saving Data')
         except:
             print('The Directory: ' + folder_to_save_to + ' Already Exists. Saving Data')
-        
+            
         # Set X and Y Labels on the plot
         plt.xlabel('Time in 600ths of a second', fontsize = 14)
         plt.ylabel('Amplitude in Mv (Millivolts)', fontsize = 14)
         
         # Save and clear the plot
-        plt.savefig(folder_to_save_to + file_name + '.png')
+        # bbox_inches = "tight" is to make sure that the whole of the graph fits within the image
+        plt.savefig(folder_to_save_to + file_name + '.png', bbox_inches = "tight")
         plt.cla() # Clear the plot
         

@@ -225,7 +225,6 @@ class PeakValleyDetection:
                         # Plot the individual heartbeat and the valley (segment) that was found
                         plt.plot(ecg_data_heartbeat_slice, '-', segment_index, segment, 'ro')
                         plt.legend(['ECG Signal', 'Valley'], loc='best')
-                        plt.text(0.5, 0.5, 'Peak Detection Cutoff Height = ' + str(mean_of_data[0]))
                         plt.title('Single Beat PRT-Peaks Plotted Against ECG Data', fontsize = 20)
                         
                         # Make sure directory exists to save file to and save graph

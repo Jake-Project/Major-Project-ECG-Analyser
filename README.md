@@ -3,12 +3,21 @@ This project is written using Python 3.7 and Spyder.
 
 ## Premise
 As the final Capstone for my Bachelors at Aberystwyth University I researched Electrocardiograms and studyied the classification of PQRST-Waves. 
+
+The software is comprised of a simple UI that allows the user to open a folder containing CSV files containing ECG data. These files must have followed the process outline in the Data Aquisition portion of this README.
+The files are fed through a series of processes that remove the three main types of noise from the signal - Electromyographic Noise (noise caused by the muscles), Baseline Drift and Electromagnetic Noise caused by the ECG Electrodes and leads.
+
+The PQRST-Waves are then calculated using peak and valley detection. Graphs are created throughout this process to illustrate the process.
 After the PQRST-Waves have been extracted, the heartrate and heartrate zone can be identified.
+The PQRST-Wave points are saved to a CSV file that could potentially used for medical diagnosis
+
+![The Final Output Signal](https://github.com/Jake-Project/Major-Project-ECG-Analyser/blob/Feature-10---Code-Cleanup/Data/Jake%20ECG%20CSV%20Data%20Raw%20From%20ECG%20Toolkit%202.4/Graphs/Part%2011%20-%20PQRST%20Sections%20Plotted%20Against%20Processed%20Averaged%20ECG%20Signal/Jake%20Newall%20Laying%20Down%20-%204.png)
 
 ## Data Aquisition
-Data was recorded on the Welch Allyn CardioPerfect Electrocardiograph at 600hz
+Data was recorded on the Welch Allyn CardioPerfect Electrocardiograph at 600hz using a 10 lead setup
 The data was then exported as a .scp file and imported into the ECG Toolkit 2.4 software.
 The data was finally exported as a CSV file that this program can read.
+The program takes the 8 leads which are exported from the CardioPerfect software and averages them to 1.
 
 ## Files
 In total, there are 3 files which are to be used:
